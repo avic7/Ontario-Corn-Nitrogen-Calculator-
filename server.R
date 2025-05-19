@@ -5,7 +5,7 @@ server <- function(input, output, session) {
       value    = input$soil_type,
       subtitle = "Soil Type",
       icon     = icon("leaf"),
-      color    = "green"
+      color    = "green"  # valid
     )
   })
   
@@ -14,7 +14,7 @@ server <- function(input, output, session) {
       value    = paste0(input$yield_goal, " bu/ac"),
       subtitle = "Yield Goal",
       icon     = icon("chart-line"),
-      color    = "blue"
+      color    = "blue"  # valid
     )
   })
   
@@ -23,18 +23,16 @@ server <- function(input, output, session) {
       value    = paste0(input$heat_units, " GDD"),
       subtitle = "Heat Units",
       icon     = icon("sun"),
-      color    = "orange"
+      color    = "yellow"  # use valid option
     )
   })
   
   output$crop_box <- renderValueBox({
     valueBox(
-      value    = input$prev_crop,
+      value    = input$previous_crop,  # FIXED input ID
       subtitle = "Previous Crop",
       icon     = icon("seedling"),
-      color    = "purple"
+      color    = "teal"  # close to purple
     )
   })
-  
-  # …your other server logic…
 }
