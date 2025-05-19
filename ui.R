@@ -16,6 +16,37 @@ ui <- navbarPage(
   theme = shinytheme("flatly"),
   title = div(style = "font-size: 24px;", "Corn Nitrogen Calculator"),
   
+  
+  header = tagList(
+    tags$head(
+      tags$style(HTML("
+  .small-box {
+    height: 85px !important;
+    padding: 10px;
+  }
+
+  .small-box .icon {
+    top: 10px !important;
+    font-size: 30px !important;
+    opacity: 0.3;
+  }
+
+  .small-box h3 {
+    font-size: 24px !important;
+    font-weight: bold;
+  }
+
+  .small-box p {
+    font-size: 14px;
+    margin: 0;
+  }
+")),
+      
+      tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/admin-lte@2.4.18/dist/css/AdminLTE.min.css"),
+      tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/gh/trestletech/shinydashboard@gh-pages/shinydashboard.min.css")
+    )
+  ),
+  
   tabPanel("Calculator",
            fluidPage(
              fluidRow(
@@ -33,64 +64,9 @@ ui <- navbarPage(
                                       width = "300px")
                       )
                )
-             ),
-             fluidRow(
-               column(width = 12,
-                      div(style = "display: flex; justify-content: flex-end; padding-right: 40px;",
-                          selectInput("units_select",
-                                      label = strong("Select Units"),
-                                      choices = c("Metric (kg/ha)", "Imperial (lb/ac)"),
-                                      selected = "Metric (kg/ha)",
-                                      width = "300px")
-                      ))
              )
            ),
-           # Input row: only soil type 
-           # fluidRow(
-           #   column(6,
-           #          selectInput(
-           #            inputId  = "soil_type",
-           #            label    = "Soil Type",
-           #            choices  = c("Clay", "Loam", "Sandy Loam", "Sand"),
-           #            selected = "Loam"
-           #          )
-           #   )
-           # ),
-           # fluidRow(
-           #   column(6,
-           #          sliderInput(
-           #            inputId = "yield_adjustment",
-           #            label = "Yield Adjustment",
-           #            min = 70,
-           #            max = 200,
-           #            value = 150,
-           #            step = 10
-           #          ))
-           # ),
-           # fluidRow(
-           #   column(6,
-           #          sliderInput(
-           #            inputId = "heat_units",
-           #            label = "Heat Units",
-           #            min = 70,
-           #            max = 200,
-           #            value = 150,
-           #            step = 10
-           #          ))
-           # ),
-           # fluidRow(
-           #   column(6,
-           #          selectInput(
-           #            inputId  = "crop_type",
-           #            label    = "Select Previous Type",
-           #            choices  = c("Grain Corn", "Silage Corn", "Cereals (straw removed)", "Cereals (straw not removed)",
-           #                         "Soybeans","Edible Beans","Red Clover underseeded (plowed)","Red Clover underseeded (no-till corn)",
-           #                         "Perennial Forages 0 to 1/3 legume", "Perennial Forages  1/3 to 1/2 legume", "Perennial Forages  Over 1/2 legume"),
-           #            selected = "Grain Corn "
-           #          )
-           #   )
-           # )
-           
+
            fluidRow(
              # Region Select
              column(
