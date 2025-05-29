@@ -188,7 +188,7 @@ ui <- navbarPage(
   
   tabPanel("OMAFRA Calculator",
            fluidPage(
-             # Header Section
+             # Header
              fluidRow(
                column(width = 12,offset = 2,
                       tags$h1(
@@ -227,6 +227,7 @@ ui <- navbarPage(
                )
              ),
              
+             # Base Nitrogen Requirement
              h2("Base N Requirement"),
              fluidRow(
                column(width = 12,
@@ -270,7 +271,8 @@ ui <- navbarPage(
                       )
                )
              ),
-             
+           
+             # Total Nitrogen Recommendation  
              h2("Total N Recommendation"),
              fluidRow(
                column(width = 12,
@@ -309,13 +311,13 @@ ui <- navbarPage(
                )
              ),
              
-             # Box 2: Nitrogen Credits (2 inputs, 2 outputs)
+             #  Nitrogen Credits 
              h2("Nitrogen Credits"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
                           fluidRow(
-                            # Left column - Input labels and input boxes
+                            # Input boxes
                             column(6,
                                    # Starter N row
                                    fluidRow(
@@ -339,7 +341,7 @@ ui <- navbarPage(
                                    )
                             ),
                             
-                            # Right column - Output boxes
+                            # Output boxes
                             column(6,
                                    # Starter N output
                                    div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 15px;",
@@ -355,12 +357,12 @@ ui <- navbarPage(
                )
              ),
              
+             # Preplant Additional N OR SideDress Additional N
              h2("Additional Nitrogen Application"),
-             # Box 3: Preplant Additional N OR SideDress Additional N
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
-                          # Preplant Additional N outputs (green background)
+                          # Preplant Additional N outputs
                           fluidRow(
                             column(6,
                                    div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Preplant Additional N"),
@@ -393,7 +395,7 @@ ui <- navbarPage(
                             )
                           ),
                           
-                          # SideDress Additional N outputs (green background)
+                          # SideDress Additional N outputs 
                           fluidRow(
                             column(6,
                                    div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "SideDress Additional N"),
@@ -413,11 +415,12 @@ ui <- navbarPage(
                )
              ),
             
+             # Price Ratio 
              h2("Price Ratio Calculations"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
-                          # Conditional layout for Western Ontario (3 inputs evenly distributed)
+                          # Layout for Western Ontario
                           conditionalPanel(
                             condition = "input.region == 'Western Ontario'",  
                             fluidRow(
@@ -437,9 +440,9 @@ ui <- navbarPage(
                               )
                             )
                           ),
-                          # Layout for Eastern Ontario (5 inputs)
+                          # Layout for Eastern Ontario
                           conditionalPanel(
-                            condition = "input.region == 'Eastern Ontario'",  # ✅ Fixed: changed from region_select to region
+                            condition = "input.region == 'Eastern Ontario'",
                             fluidRow(
                               column(2,
                                      div(class = "card-input-title", "Enter expected corn price"),
@@ -479,11 +482,13 @@ ui <- navbarPage(
                                    )
                             )
                           )))),
+             
+             
              h2("Price Ratio Adjustment"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
-                          # First row - Price Ratio output
+                          # Price Ratio output
                           fluidRow(
                             column(12,
                                    div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Price Ratio ($N:$corn)"),
@@ -493,7 +498,6 @@ ui <- navbarPage(
                             )
                           ),
                           
-                          # Second row - 2 adjustment outputs
                           fluidRow(
                             column(6,
                                    div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Imperial(lb/ac)"),
