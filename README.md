@@ -23,7 +23,7 @@ The dashboard visualizes nitrogen response trends and calculates the **Most Econ
 ## Tech Stack
 - **R**, **RStudio**
 - **R Shiny** (UI + Server Logic)
-- **dplyr**, **tidyr**, **purrr** (Data Wrangling)
+- **dplyr**, **tidyr**,(Data Wrangling)
 - **ggplot2**, **plotly** (Visualizations)
 - **nls()** (Non-linear Regression Modeling)
 - **GitHub** (Version Control)
