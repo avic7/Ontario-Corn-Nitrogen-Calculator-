@@ -1,10 +1,12 @@
 library(shiny)
 library(shinydashboard)
 library(DT)
+library(dplyr)
 library(readxl)
 library(shinythemes)
 library(fontawesome)
 library(shinyWidgets)
+
 
 # UI 
 ui <- navbarPage(
@@ -12,178 +14,7 @@ ui <- navbarPage(
   theme = shinytheme("flatly"),
   fluid = TRUE,
   header = tags$head(
-    tags$style(HTML("
-      /* Agricultural Color Palette for Ontario Corn Calculator */
-      :root {
-        /* Primary Agricultural Colors */
-        --corn-gold: #F1C40F;          /* Bright corn yellow */
-        --corn-mature: #F39C12;        /* Mature corn orange */
-        --fertile-soil: #8B4513;       /* Rich soil brown */
-        --spring-green: #27AE60;       /* Fresh growth green */
-        --forest-green: #1E8449;       /* Deep forest green */
-        --sky-blue: #3498DB;           /* Clear sky blue */
-        --harvest-orange: #E67E22;     /* Harvest sunset orange */
-        --nitrogen-blue: #2980B9;      /* Nitrogen rich blue */
-        --healthy-crop: #58D68D;       /* Healthy crop light green */
-        --prairie-beige: #D5DBDB;      /* Prairie/field beige */
-      }
-
-      /* Enhanced Small Boxes with Agricultural Theme */
-      .small-box {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: flex-start;
-        height: 110px;
-        padding: 16px;
-        border-radius: 12px;
-        font-weight: bold;
-        color: white;
-        margin-top: 10px;
-        margin-bottom: 10px;
-        position: relative;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-      }
-
-      .small-box:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-      }
-
-      .small-box .main-text {
-        font-size: 20px;
-        font-weight: 700;
-        line-height: 1.2;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-      }
-
-      .small-box .subtext {
-        font-size: 14px;
-        opacity: 0.95;
-        margin-top: 6px;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-      }
-
-      .small-box .icon {
-        position: absolute;
-        top: 10px;
-        right: 12px;
-        font-size: 26px;
-        opacity: 0.3;
-      }
-
-      /* Agricultural Color Scheme for Value Boxes */
-      .bg-soil { 
-        background: linear-gradient(135deg, var(--fertile-soil), #A0522D);
-      }
-
-      .bg-yield { 
-        background: linear-gradient(135deg, var(--corn-gold), var(--corn-mature));
-      }
-
-      .bg-heat { 
-        background: linear-gradient(135deg, var(--harvest-orange), #D35400);
-      }
-
-      .bg-crop { 
-        background: linear-gradient(135deg, var(--spring-green), var(--forest-green));
-      }
-
-      .bg-nitrogen {
-        background: linear-gradient(135deg, var(--nitrogen-blue), var(--sky-blue));
-      }
-
-      .bg-calculation {
-        background: linear-gradient(135deg, var(--healthy-crop), var(--spring-green));
-      }
-
-      /* Enhanced Input Cards */
-      .input-card {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        padding: 30px;
-        margin-bottom: 25px;
-        transition: box-shadow 0.3s ease;
-      }
-
-      .input-card:hover {
-        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-      }
-
-      h1, h2, h3 {
-        color: var(--forest-green);
-        font-weight: 600;
-      }
-
-      h2 {
-        padding-bottom: 10px;
-        margin-bottom: 25px;
-      }
-
-      /* Form Inputs Enhancement */
-      .form-control:focus {
-        border-color: var(--spring-green);
-        box-shadow: 0 0 0 0.2rem rgba(39, 174, 96, 0.25);
-      }
-
-      .form-group label {
-        color: var(--forest-green);
-        font-weight: 500;
-        margin-bottom: 8px;
-      }
-
-      /* Select Dropdown Styling */
-      .selectize-input {
-        border: 2px solid #E8F5E8;
-        border-radius: 8px;
-      }
-
-      .selectize-input.focus {
-        border-color: var(--spring-green);
-      }
-
-      /* Region Select Enhancement */
-      #region_select {
-        border: 2px solid var(--corn-gold);
-        border-radius: 8px;
-        background-color: white;
-      }
-
-      /* Numeric Input Styling */
-      input[type='number'] {
-        border: 2px solid #E8F5E8;
-        border-radius: 8px;
-        padding: 8px 12px;
-      }
-
-      input[type='number']:focus {
-        border-color: var(--spring-green);
-        outline: none;
-        box-shadow: 0 0 5px rgba(39, 174, 96, 0.3);
-      }
-
-      /* Card Input Title */
-      .card-input-title {
-        color: var(--forest-green);
-        font-weight: 600;
-        margin-bottom: 10px;
-        font-size: 14px;
-      }
-
-      /* Responsive Design */
-      @media (max-width: 768px) {
-        .small-box {
-          height: 90px;
-          padding: 12px;
-        }
-        
-        .small-box .main-text {
-          font-size: 16px !important;
-        }
-      }
-    "))
+    tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
   ),
   
   tabPanel("OMAFRA Calculator",
@@ -271,7 +102,7 @@ ui <- navbarPage(
                       )
                )
              ),
-           
+             
              # Total Nitrogen Recommendation  
              h2("Total N Recommendation"),
              fluidRow(
@@ -340,8 +171,6 @@ ui <- navbarPage(
                                      )
                                    )
                             ),
-                            
-                            # Output boxes
                             column(6,
                                    # Starter N output
                                    div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 15px;",
@@ -414,13 +243,13 @@ ui <- navbarPage(
                       )
                )
              ),
-            
+             
              # Price Ratio 
              h2("Price Ratio Calculations"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
-                          # Layout for Western Ontario
+                          # Western Ontario
                           conditionalPanel(
                             condition = "input.region == 'Western Ontario'",  
                             fluidRow(
@@ -431,7 +260,8 @@ ui <- navbarPage(
                               column(4,
                                      div(class = "card-input-title", "Select fertilizer product:"),
                                      selectInput("fertilizer_product", NULL,
-                                                 choices = c("Urea", "Anhydrous Ammonia", "UAN Solution"),
+                                                 choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
+                                                             "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
                                                  selected = "Urea")
                               ),
                               column(4,
@@ -440,7 +270,7 @@ ui <- navbarPage(
                               )
                             )
                           ),
-                          # Layout for Eastern Ontario
+                          # Eastern Ontario
                           conditionalPanel(
                             condition = "input.region == 'Eastern Ontario'",
                             fluidRow(
@@ -459,7 +289,8 @@ ui <- navbarPage(
                               column(2,
                                      div(class = "card-input-title", "Select fertilizer product:"),
                                      selectInput("fertilizer_product", NULL,
-                                                 choices = c("Urea", "Anhydrous Ammonia", "UAN Solution"),
+                                                 choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
+                                                             "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
                                                  selected = "Urea")
                               ),
                               column(3,
@@ -483,36 +314,36 @@ ui <- navbarPage(
                             )
                           )))),
              
-             
+             # Price Ratio Adjustment 
              h2("Price Ratio Adjustment"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
-                          # Price Ratio output
                           fluidRow(
-                            column(12,
-                                   div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Price Ratio ($N:$corn)"),
-                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;",
-                                       textOutput("price_ratio_output")
-                                   )
-                            )
-                          ),
-                          
-                          fluidRow(
-                            column(6,
-                                   div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Imperial(lb/ac)"),
-                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;",
-                                       textOutput("adjustment_lb_ac_output")
+                            column(4,
+                                   div(class = "card-input-title", "Price Ratio ($N:$corn)"),
+                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("price_ratio_value")
                                    )
                             ),
-                            column(6,
-                                   div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Metric (kg/ha)"),
-                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;",
-                                       textOutput("adjustment_kg_ha_output")
+                            column(4,
+                                   div(class = "card-input-title", "Imperial Adjustment (lb/ac)"),
+                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("price_ratio_imperial")
+                                   )
+                            ),
+                            column(4,
+                                   div(class = "card-input-title", "Metric Adjustment (kg/ha)"),
+                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("price_ratio_metric")
                                    )
                             )
-                          ))))
-             
+                          )
+                      )
+               )
              )
+             
            )
-  )
+  ),
+  tabPanel("About",     h2("About the app"))
+)
