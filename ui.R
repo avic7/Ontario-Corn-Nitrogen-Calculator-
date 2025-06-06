@@ -10,20 +10,37 @@ library(shinyWidgets)
 
 # UI 
 ui <- navbarPage(
-  title = "OCNC",
+  title = div(
+    span("OCNC", style = "margin-right: auto;"),
+    div(style = "position: absolute; right: 15px; top: 50%; transform: translateY(-50%); display: flex; align-items: center;",
+        tags$a(href = "https://github.com/yourusername", target = "_blank", 
+               style = "color: #999; font-size: 18px; margin: 0 8px; text-decoration: none;",
+               tags$i(class = "fab fa-github")
+        ),
+        tags$a(href = "https://twitter.com/yourusername", target = "_blank",
+               style = "color: #999; font-size: 18px; margin: 0 8px; text-decoration: none;", 
+               tags$i(class = "fab fa-twitter")
+        ),
+        tags$a(href = "https://linkedin.com/in/yourusername", target = "_blank",
+               style = "color: #999; font-size: 18px; margin: 0 8px; text-decoration: none;",
+               tags$i(class = "fab fa-linkedin")
+        )
+    )
+  ),
   theme = shinytheme("flatly"),
   fluid = TRUE,
   header = tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
+    tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
+    tags$link(rel = "stylesheet", href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css")
   ),
   
-  tabPanel("OMAFRA Calculator",
+  tabPanel("Calculator",
            fluidPage(
              # Header
              fluidRow(
                column(width = 12,offset = 2,
                       tags$h1(
-                        "OMAFRA General Recommended Nitrogen", tags$br(),
+                        "OMAFA General Recommended Nitrogen", tags$br(),
                         "Rates for Corn",
                         style = "
                         font-size:5rem; 
@@ -133,17 +150,17 @@ ui <- navbarPage(
                       div(style = "background-color: #e8f5e9; border-radius: 12px; padding: 25px; margin-top: 20px;",
                           h3("Recommended Nitrogen Rate", style = "color: var(--forest-green); margin-bottom: 15px;"),
                           p(style = "font-size: 16px; line-height: 1.6; color: #2c3e50;",
-                            span(style = "font-weight: bold; color: var(--forest-green); font-size: 18px;",), 
+                            span(style = "font-weight: bold; color: var(--forest-green); font-size: 18px;"), 
                             "This recommendation considers your soil type, previous crop,yield goal and heat units. For more detailed information and adjustment factors, please consult the ",
-                            a("OMAFRA Agronomy Guide", href = "#", style = "color: var(--spring-green); text-decoration: underline;"),
+                            a("OMAFA Guide", href = "https://fieldcropnews.com/2024/05/ontario-corn-nitrogen-calculator/", style = "color: var(--spring-green); text-decoration: underline;"),
                             " or visit the Resources section."
                           )
                       )
                )
              ),
              
-             #  Nitrogen Credits 
-             h2("Nitrogen Credits"),
+             #  Fertilizer Management 
+             h2("Ferilizer Management"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
@@ -184,13 +201,37 @@ ui <- navbarPage(
                           )
                       )
                )
-             ),
+             ), 
              
-             # Preplant Additional N OR SideDress Additional N
-             h2("Additional Nitrogen Application"),
+             
+             #F Fertilizer Management Split
+             h2("Fertilizer Management Split"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
+                          
+                          # Add Split Slider
+                          fluidRow(
+                            column(12,
+                                   div(class = "card-input-title", "Split Percentage"),
+                                   div(style = "padding: 0 20px;",
+                                       sliderInput("split_percentage", 
+                                                   label = NULL,
+                                                   min = 0, 
+                                                   max = 100, 
+                                                   value = 50, 
+                                                   step = 5,
+                                                   post = "%",
+                                                   width = "100%")
+                                   ),
+                                   div(style = "text-align: center; color: #666; font-size: 14px; margin-top: 10px;",
+                                       "Move slider to adjust split between Preplant and Sidedress application")
+                            )
+                          ),
+                          
+                          # Spacing
+                          br(),
+                          
                           # Preplant Additional N outputs
                           fluidRow(
                             column(6,
@@ -341,9 +382,114 @@ ui <- navbarPage(
                           )
                       )
                )
-             )
+             ))),
+
+  
+  # About section 
+  tabPanel("About",
+           fluidPage(
+             style = "padding: 40px;",
              
+             # Logo
+             fluidRow(
+               column(width = 12,
+                      div(style = "display: flex; align-items: center; margin-bottom: 30px; padding: 0 20px;",
+                          div(style = "flex: 1; text-align: center;",
+                              tags$img(src = "uog.png", 
+                                       style = "max-width: 500px; height: 150px; object-fit: contain;",
+                                       alt = "University of Guelph - Ontario Agricultural College")
+                          ),
+                          div(style = "flex: 1; text-align: center;",
+                              tags$img(src = "OMAFA.png", 
+                                       style = "max-width: 1500px; height: 150px; object-fit: contain;",
+                                       alt = "Ontario")
+                          ),
+                          div(style = "flex: 1; text-align: center;",
+                              tags$img(src = "GFO.png", 
+                                       style = "max-width: 1500px; height: 150px; object-fit: contain;",
+                                       alt = "Grain Farmers of Ontario")
+                          )
+                      )
+               )
+             ),
+             # Description 
+             fluidRow(
+               column(width = 12,
+                      h2("Description", style = "color: #333; font-size: 4rem; margin-bottom: 20px; font-weight: 600;"),
+                      
+                      p(style = "font-size: 20px; line-height: 1.7; color: #555; margin-bottom: 20px;",
+                        "This RShiny application is a modern adaptation of the Ontario Corn Nitrogen Calculator, 
+                      designed to assist corn producers in determining the most economically optimal nitrogen 
+                      (N) application rates for their fields. Leveraging over four decades of Ontario-based corn N 
+                      response data, the tool integrates key agronomic factors such as soil texture, 
+                      regional location (Eastern vs. Western Ontario), yield potential, 
+                      crop heat units, and previous crop history to provide tailored N recommendations."
+                      ),
+                      
+                      p(style = "font-size: 20px; line-height: 1.7; color: #555; margin-bottom: 20px;",
+                        "The calculator further refines its suggestions by accounting for the 
+                      relative pricing of nitrogen fertilizer to corn, credits from starter fertilizers and 
+                      manure applications, as well as adjustments based on sidedress application timings. 
+                      By incorporating these variables, the app aims to enhance nitrogen use efficiency, 
+                      optimize crop yields, and support sustainable farming practices across Ontario's diverse 
+                      agricultural landscapes."
+                      ),
+               )
+             ),             
+             # Separator line
+             fluidRow(
+               column(width = 12,
+                      hr(style = "border-top: 1px solid #000; margin: 30px 0;")
+               )
+             ),          
+             # Citation 
+             fluidRow(
+               column(width = 12,
+                      h2("Citation", style = "color: #333; font-size: 4rem; margin-bottom: 20px; margin-top: 20px; font-weight: 600;"),
+                      
+                      p(style = "font-size: 20px; line-height: 1.6; color: #555; font-style: italic; margin-bottom: 10px;",
+                        "Ontario Ministry of Agriculture, Food and Rural Affairs. (2024). Ontario Corn Nitrogen Calculator - OMAFRA Recommendations. Field Crop News, Ontario."
+                      ),
+                      
+                      tags$a(href = "https://fieldcropnews.com/2024/05/ontario-corn-nitrogen-calculator/", 
+                             target = "_blank",
+                             style = "color: #2c5530; text-decoration: underline; font-size: 14px;",
+                             "https://fieldcropnews.com/2024/05/ontario-corn-nitrogen-calculator/"
+                      )
+               )
+             ),             
+             # Separator line
+             fluidRow(
+               column(width = 12,
+                      hr(style = "border-top: 1px solid #000; margin: 30px 0;")
+               )
+             ),             
+             # Credits 
+             fluidRow(
+               column(width = 12,
+                      h2("Credits", style = "color: #333; font-size: 4rem; margin-bottom: 20px; margin-top: 20px; font-weight: 600;"),
+                      
+                      p(style = "font-size: 20px; line-height: 1.6; color: #555; margin-bottom: 15px;",
+                        "This application was designed and developed by Adrian Correndo and Atharva Vichare. ",
+                        tags$a(href = "https://github.com/avic7", 
+                               target = "_blank",
+                               style = "color: #2c5530; text-decoration: underline;",
+                               "https://github.com/avic7"
+                        )
+                      ),
+                      
+                      p(style = "font-size: 16px; line-height: 1.6; color: #666; margin-bottom: 0; font-style: italic;",
+                        "Chang, W., Cheng, J., Allaire, J.J., Xie, Y., and McPherson, J. (2021). ",
+                        tags$em("shiny: Web Application Framework for R"),
+                        ". R package version 1.7.1. ",
+                        tags$a(href = "https://CRAN.R-project.org/package=shiny", 
+                               target = "_blank",
+                               style = "color: #2c5530; text-decoration: underline;",
+                               "https://CRAN.R-project.org/package=shiny"
+                        )
+                      )
+               )
+             )
            )
-  ),
-  tabPanel("About",     h2("About the app"))
+  )
 )
