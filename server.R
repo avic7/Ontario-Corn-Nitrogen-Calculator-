@@ -63,7 +63,7 @@ server <- function(input, output, session) {
     req(target_yield())
     div(class = "small-box bg-yield",
         div(class = "main-text", paste0(round(target_yield()$imperial, 1), " bu/ac")),
-        div(class = "subtext", "Target Yield (Imperial)"),
+        div(class = "subtext", "Yield (Imperial)"),
         div(class = "icon", icon("chart-line"))
     )
   })
@@ -73,7 +73,7 @@ server <- function(input, output, session) {
     req(target_yield())
     div(class = "small-box bg-yield",
         div(class = "main-text", paste0(round(target_yield()$metric, 1), " kg/ha")),
-        div(class = "subtext", "Target Yield (Metric)"),
+        div(class = "subtext", "Yield (Metric)"),
         div(class = "icon", icon("chart-line"))
     )
   })
@@ -82,8 +82,8 @@ server <- function(input, output, session) {
   output$vb_heat_1 <- renderUI({
     req(heat_unit_adj())
     div(class = "small-box bg-heat",
-        div(class = "main-text", paste0(round(heat_unit_adj()$imperial, 1), " HU")),
-        div(class = "subtext", "CHU Adjustment (Imperial)"),
+        div(class = "main-text", paste0(round(heat_unit_adj()$imperial, 1), " lbs N/ac")),
+        div(class = "subtext", "Heat Units (Imperial)"),
         div(class = "icon", icon("temperature-high"))
     )
   })
@@ -92,8 +92,8 @@ server <- function(input, output, session) {
   output$vb_heat_2 <- renderUI({
     req(heat_unit_adj())
     div(class = "small-box bg-heat",
-        div(class = "main-text", paste0(round(heat_unit_adj()$metric, 1), " HU")),
-        div(class = "subtext", "CHU Adjustment (Metric)"),
+        div(class = "main-text", paste0(round(heat_unit_adj()$metric, 1), " kg N/ac")),
+        div(class = "subtext", "Heat Units (Metric)"),
         div(class = "icon", icon("temperature-high"))
     )
   })
@@ -103,7 +103,7 @@ server <- function(input, output, session) {
     req(crop_adjustment())
     div(class = "small-box bg-crop",
         div(class = "main-text", crop_adjustment()[[2]]),
-        div(class = "subtext", "Crop Adjustment (lb/ac)"),
+        div(class = "subtext", "Previous Crop (lb/ac)"),
         div(class = "icon", icon("leaf"))
     )
   })
@@ -113,7 +113,7 @@ server <- function(input, output, session) {
     req(crop_adjustment())
     div(class = "small-box bg-crop",
         div(class = "main-text", crop_adjustment()[[3]]),
-        div(class = "subtext", "Crop Adjustment (kg/ha)"),
+        div(class = "subtext", "Previous Crop(kg/ha)"),
         div(class = "icon", icon("leaf"))
     )
   })
@@ -222,51 +222,110 @@ server <- function(input, output, session) {
     }
   })
   
-  # Total Nitrogen Recommendation (Imperial)
-  output$total_n_imperial <- renderText({
+  total_n_imperial <- reactive({
     req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment())
     
-    total <- as.numeric(selected_soil()[[2]]) +
+    as.numeric(selected_soil()[[2]]) +
       as.numeric(target_yield()$imperial) +
       as.numeric(heat_unit_adj()$imperial) +
       as.numeric(crop_adjustment()[[2]])
-    
-    paste0(round(total, 1), " lb/ac")
   })
   
-  
-  # Total Nitrogen Recommendation (Metric)
-  output$total_n_metric <- renderText({
+  total_n_metric <- reactive({
     req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment())
     
-    total <- as.numeric(selected_soil()[[3]]) +
+    as.numeric(selected_soil()[[3]]) +
       as.numeric(target_yield()$metric) +
       as.numeric(heat_unit_adj()$metric) +
       as.numeric(crop_adjustment()[[3]])
+  })
+  
+  # Backend calculation for Difference 
+  difference <- reactive({
+    req(total_n_imperial(), total_n_metric(), 
+        input$starter_n_imperial, input$manure_credit_imperial)
     
-    paste0(round(total, 1), " kg/ha")
+    # Calculate Difference (Imperial) = Total N - Starter N - Manure Credit
+    diff_imperial <- total_n_imperial() - input$starter_n_imperial - input$manure_credit_imperial
+    
+    # Calculate Difference (Metric) = Total N - Starter N (converted) - Manure Credit (converted)
+    starter_n_metric <- input$starter_n_imperial * 1.12
+    manure_credit_metric <- input$manure_credit_imperial * 1.12
+    diff_metric <- total_n_metric() - starter_n_metric - manure_credit_metric
+    
+    # Return both values as a list
+    list(
+      imperial = diff_imperial,
+      metric = diff_metric
+    )
   })
   
   
-  # Calculation of  preplant additional N
+  # Reactive Total Nitrogen Recommendation (Imperial) 
+  output$total_n_imperial <- renderText({
+    req(total_n_imperial())
+    paste0(round(total_n_imperial(), 1), " lb/ac")
+  })
+  
+  # Reactive Total Nitrogen Recommendation (Metric)   
+  output$total_n_metric <- renderText({
+    req(total_n_metric())
+    paste0(round(total_n_metric(), 1), " kg/ha")
+  })
+
+  # Preplant Additional N calculations
+  preplant_additional_n <- reactive({
+    req(difference(), input$split_percentage)
+    
+    # Convert percentage to decimal (50% = 0.5)
+    split_decimal <- input$split_percentage / 100
+    
+    # Calculate Preplant Additional N
+    preplant_imperial <- difference()$imperial * split_decimal
+    preplant_metric <- difference()$metric * split_decimal
+    
+    list(
+      imperial = preplant_imperial,
+      metric = preplant_metric
+    )
+  })
+  
+  # SideDress Additional N calculations  
+  sidedress_additional_n <- reactive({
+    req(difference(), preplant_additional_n())
+    
+    # Calculate SideDress Additional N = Difference - Preplant
+    sidedress_imperial <- difference()$imperial - preplant_additional_n()$imperial
+    sidedress_metric <- difference()$metric - preplant_additional_n()$metric
+    
+    list(
+      imperial = sidedress_imperial,
+      metric = sidedress_metric
+    )
+  })
+  
+  # Updating output functions 
   output$preplant_additional_n_imperial <- renderText({
-    "22" # Placeholder 
+    req(preplant_additional_n())
+    paste0(round(preplant_additional_n()$imperial, 1), " lb/ac")
   })
   
   output$preplant_additional_n_metric <- renderText({
-    "25" # Placeholder 
+    req(preplant_additional_n())
+    paste0(round(preplant_additional_n()$metric, 1), " kg/ha")
   })
   
-  # Calculation of sidedress additional N
   output$sidedress_additional_n_imperial <- renderText({
-    "22" # Placeholder 
+    req(sidedress_additional_n())
+    paste0(round(sidedress_additional_n()$imperial, 1), " lb/ac")
   })
   
   output$sidedress_additional_n_metric <- renderText({
-    "25" # Placeholder 
+    req(sidedress_additional_n())
+    paste0(round(sidedress_additional_n()$metric, 1), " kg/ha")
   })
   
-  # Nitrogen Credit Calculations
+  # Fertilizer Management Calculations
   output$starter_n_credit <- renderText({
     req(input$starter_n_imperial)
     paste0(round(input$starter_n_imperial * 1.12, 1), " kg/ha")
@@ -276,6 +335,8 @@ server <- function(input, output, session) {
     req(input$manure_credit_imperial)
     paste0(round(input$manure_credit_imperial * 1.13, 1), " kg/ha")
   })
+  
+  
   
   # Price Ratio Adjustment Calculation
   price_ratio <- reactive({
