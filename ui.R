@@ -38,25 +38,32 @@ ui <- navbarPage(
            fluidPage(
              # Header
              fluidRow(
-               column(width = 12,offset = 2,
-                      tags$h1(
-                        "OMAFA General Recommended Nitrogen", tags$br(),
-                        "Rates for Corn",
-                        style = "
-                        font-size:5rem; 
-                        font-weight:700; 
-                        line-height:1.2; 
-                        margin-bottom:0.2rem; 
-                        text-align:left;"
-                      ),
-                      tags$h4(
-                        "Corn N Calculator",
-                        style = "color:#6c757d; 
-                        font-size:3rem; 
-                        font-weight:400; 
-                        margin-top:0; 
-                        margin-bottom:2rem; 
-                        text-align:left;"
+               column(width = 12,
+                      div(
+                        style = "display: flex;",
+                        tags$img(src = "corn.png", 
+                                 height = "60px", style = "margin-right: 30px;"),
+                        div(
+                          tags$h1(
+                            "Ontario Corn Nitrogen Calculator",
+                            style = "
+               font-size:5rem; 
+               font-weight:700; 
+               line-height:1.2; 
+               margin-bottom:0.2rem; 
+               text-align:left;"
+                          ),
+                          tags$h4(
+                            "OMAFA General Recommended Nitrogen Rates for Corn", 
+                            
+                            style = "color:#6c757d; 
+               font-size:2rem; 
+               font-weight:400; 
+               margin-top:0; 
+               margin-bottom:2rem; 
+               text-align:left;"
+                          )
+                        )
                       )
                )
              ),
@@ -82,26 +89,15 @@ ui <- navbarPage(
                       div(class = "input-card",
                           fluidRow(
                             column(3,
-                                   div(class = "card-input-title", "Select Soil type"),
+                                   div(class ="card-input-title", "Select Soil type"),
                                    selectInput("soil_type", NULL,
-                                               choices = c("Clay", "Loam", "Sandy Loam", "Sand"),
+                                               choices = c("Clay", "Heavy Clay","Clay Loam","Loam",
+                                                           "Loamy Sand","Sandy Loam","Sand",
+                                                           "Sandy Clay","Sandy Clay Loam","Silt Loam",
+                                                           "Silty Clay Loam","Silty Clay"),
                                                selected = "Loam"),
                                    uiOutput("vb_soil_1"),
                                    uiOutput("vb_soil_2")
-                            ),
-                            column(3,
-                                   div(class = "card-input-title", "Yield Adjustment"),
-                                   numericInput("yield_adjustment", NULL,
-                                                value = 180, min = 70, max = 200, step = 10),
-                                   uiOutput("vb_yield_1"),
-                                   uiOutput("vb_yield_2")
-                            ), 
-                            column(3,
-                                   div(class = "card-input-title", "Heat Units"),
-                                   numericInput("heat_units", NULL,
-                                                value = 1800, min = 1200, max = 2400, step = 100),
-                                   uiOutput("vb_heat_1"),
-                                   uiOutput("vb_heat_2")
                             ),
                             column(3,
                                    div(class = "card-input-title", "Select Previous Crop"),
@@ -114,9 +110,49 @@ ui <- navbarPage(
                                                selected = "Grain Corn"),
                                    uiOutput("vb_crop_1"),
                                    uiOutput("vb_crop_2")
+                            ),
+                            column(3,
+                                   div(class = "card-input-title", "Yied (bu/ac)"),
+                                   numericInput("yield_adjustment", NULL,
+                                                value = 180, min = 70, max = 200, step = 10),
+                                   uiOutput("vb_yield_1"),
+                                   uiOutput("vb_yield_2")
+                            ), 
+                            column(3,
+                                   div(class = "card-input-title", "Heat Units (CHU)"),
+                                   numericInput("heat_units", NULL,
+                                                value = 1800, min = 1200, max = 2400, step = 100),
+                                   uiOutput("vb_heat_1"),
+                                   uiOutput("vb_heat_2")
                             )
                           )
                       )
+               )
+             ),
+      
+             # Precipitation V5 - V12 Section
+             conditionalPanel(
+               condition = "input.soil_type == 'Silt Loam'",
+               tagList(
+                 h2("Precipitation"),
+                 fluidRow(
+                   column(width = 12,
+                          div(class = "input-card",
+                              fluidRow(
+                                column(4,
+                                       div(class = "card-input-title", "Precipitation V5 - V12 (mm)"),
+                                       numericInput("precipitation", NULL, value = 100, min = 0, step = 1)
+                                ),
+                                column(4,
+                                       uiOutput("vb_precip_1")
+                                ),
+                                column(4,
+                                       uiOutput("vb_precip_2")
+                                )
+                              )
+                          )
+                   )
+                 )
                )
              ),
              
@@ -159,7 +195,7 @@ ui <- navbarPage(
                )
              ),
              
-             #  Fertilizer Management 
+             # Fertilizer Management 
              h2("Ferilizer Management"),
              fluidRow(
                column(width = 12,
@@ -170,7 +206,7 @@ ui <- navbarPage(
                                    # Starter N row
                                    fluidRow(
                                      column(8,
-                                            div(class = "card-input-title", "Enter Starter N (lb-N/ac)")
+                                            div(class = "card-input-title", "Starter N (lb-N/ac)")
                                      ),
                                      column(4,
                                             numericInput("starter_n_imperial", NULL, value = 10, min = 0, step = 1,
@@ -180,7 +216,7 @@ ui <- navbarPage(
                                    # Manure Credit row  
                                    fluidRow(
                                      column(8,
-                                            div(class = "card-input-title", "Enter Manure Credit (lb-N/ac)")
+                                            div(class = "card-input-title", "Manure Credit (lb-N/ac)")
                                      ),
                                      column(4,
                                             numericInput("manure_credit_imperial", NULL, value = 20, min = 0, step = 1,
@@ -204,8 +240,8 @@ ui <- navbarPage(
              ), 
              
              
-             #F Fertilizer Management Split
-             h2("Fertilizer Management Split"),
+             #Fertilizer Management Split
+             h2("Fertilizer Split"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
@@ -213,7 +249,7 @@ ui <- navbarPage(
                           # Add Split Slider
                           fluidRow(
                             column(12,
-                                   div(class = "card-input-title", "Split Percentage"),
+                                   div(class = "card-input-title", "Split (% Pre-Plant)"),
                                    div(style = "padding: 0 20px;",
                                        sliderInput("split_percentage", 
                                                    label = NULL,
@@ -295,18 +331,18 @@ ui <- navbarPage(
                             condition = "input.region == 'Western Ontario'",  
                             fluidRow(
                               column(4,
-                                     div(class = "card-input-title", "Enter expected corn price"),
+                                     div(class = "card-input-title", "Expected corn price"),
                                      numericInput("corn_price", NULL, value = 2.80, min = 0, step = 0.01)
                               ),
                               column(4,
-                                     div(class = "card-input-title", "Select fertilizer product:"),
+                                     div(class = "card-input-title", "Fertilizer product"),
                                      selectInput("fertilizer_product", NULL,
                                                  choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
                                                              "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
                                                  selected = "Urea")
                               ),
                               column(4,
-                                     div(class = "card-input-title", "Enter price per tonne of product:"),
+                                     div(class = "card-input-title", "Price per tonne of product"),
                                      numericInput("fertilizer_price_tonne", NULL, value = 450, min = 0, step = 1)
                               )
                             )
@@ -316,26 +352,26 @@ ui <- navbarPage(
                             condition = "input.region == 'Eastern Ontario'",
                             fluidRow(
                               column(2,
-                                     div(class = "card-input-title", "Enter expected corn price"),
+                                     div(class = "card-input-title", "Expected corn price"),
                                      numericInput("corn_price", NULL, value = 2.80, min = 0, step = 0.01)
                               ),
                               column(2,
-                                     div(class = "card-input-title", "Enter drying charges ($/bu)"),
+                                     div(class = "card-input-title", "Drying charges ($/bu)"),
                                      numericInput("drying_charges", NULL, value = 0.35, min = 0, step = 0.01)
                               ),
                               column(3,
-                                     div(class = "card-input-title", "Enter transportation and marketing ($/bu)"),
+                                     div(class = "card-input-title", "Transportation and marketing ($/bu)"),
                                      numericInput("transport_marketing", NULL, value = 0.25, min = 0, step = 0.01)
                               ),
                               column(2,
-                                     div(class = "card-input-title", "Select fertilizer product:"),
+                                     div(class = "card-input-title", "Fertilizer product"),
                                      selectInput("fertilizer_product", NULL,
                                                  choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
                                                              "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
                                                  selected = "Urea")
                               ),
                               column(3,
-                                     div(class = "card-input-title", "Enter price per tonne of product:"),
+                                     div(class = "card-input-title", "Price per tonne of product"),
                                      numericInput("fertilizer_price_tonne", NULL, value = 450, min = 0, step = 1)
                               )
                             )
@@ -455,6 +491,11 @@ ui <- navbarPage(
                              target = "_blank",
                              style = "color: #2c5530; text-decoration: underline; font-size: 14px;",
                              "https://fieldcropnews.com/2024/05/ontario-corn-nitrogen-calculator/"
+                      ),
+                      
+                      # Corn Logo Attribution
+                      p(style = "font-size: 16px; line-height: 1.6; color: #666; margin-top: 20px;",
+                        HTML('<a href="https://www.flaticon.com/free-icons/corn" title="corn icons" target="_blank" style="color: #2c5530; text-decoration: underline;">Corn icons created by Freepik - Flaticon</a>')
                       )
                )
              ),             
@@ -470,7 +511,7 @@ ui <- navbarPage(
                       h2("Credits", style = "color: #333; font-size: 4rem; margin-bottom: 20px; margin-top: 20px; font-weight: 600;"),
                       
                       p(style = "font-size: 20px; line-height: 1.6; color: #555; margin-bottom: 15px;",
-                        "This application was designed and developed by Adrian Correndo and Atharva Vichare. ",
+                        "This application was designed and developed by Atharva Vichare and Supervised by Dr.Adrian Correndo. ",
                         tags$a(href = "https://github.com/avic7", 
                                target = "_blank",
                                style = "color: #2c5530; text-decoration: underline;",
