@@ -223,21 +223,27 @@ server <- function(input, output, session) {
   })
   
   total_n_imperial <- reactive({
-    req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment())
+    req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment(),precip_adjustment(),
+        price_ratio_adjustment())
     
     as.numeric(selected_soil()[[2]]) +
       as.numeric(target_yield()$imperial) +
       as.numeric(heat_unit_adj()$imperial) +
-      as.numeric(crop_adjustment()[[2]])
+      as.numeric(crop_adjustment()[[2]])+
+      as.numeric(precip_adjustment()$imperial)+
+      price_ratio_adjustment()$imperial
   })
   
   total_n_metric <- reactive({
-    req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment())
+    req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment(),precip_adjustment(),
+        price_ratio_adjustment())
     
     as.numeric(selected_soil()[[3]]) +
       as.numeric(target_yield()$metric) +
       as.numeric(heat_unit_adj()$metric) +
-      as.numeric(crop_adjustment()[[3]])
+      as.numeric(crop_adjustment()[[3]])+
+      as.numeric(precip_adjustment()$metric)+
+      price_ratio_adjustment()$metric
   })
   
   # Backend calculation for Difference 
@@ -377,6 +383,38 @@ server <- function(input, output, session) {
     req(price_ratio_adjustment())
     paste0(round(price_ratio_adjustment()$metric, 1), " kg/ha")
   })
+  
+  
+  # Reactive Precipitation Adjustment Calculation
+  precip_adjustment <- reactive({
+    req(input$precipitation)
+    
+    imperial <- (input$precipitation) * (1 / 25.4) * 25
+    metric <- (input$precipitation) * (1) * 0.453
+    
+    list(imperial = imperial, metric = metric)
+  })
+  
+  # Value Box for Precipitation Imperial
+  output$vb_precip_1 <- renderUI({
+    req(precip_adjustment())
+    div(class = "small-box bg-nitrogen",
+        div(class = "main-text", paste0(round(precip_adjustment()$imperial, 1), " lb/inch")),
+        div(class = "subtext", "Precipitation Adjustment (Imperial)"),
+        div(class = "icon", icon("cloud-rain"))
+    )
+  })
+  
+  # Value Box for Precipitation Metric
+  output$vb_precip_2 <- renderUI({
+    req(precip_adjustment())
+    div(class = "small-box bg-nitrogen",
+        div(class = "main-text", paste0(round(precip_adjustment()$metric, 1), " kg/mm")),
+        div(class = "subtext", "Precipitation Adjustment (Metric)"),
+        div(class = "icon", icon("cloud-rain"))
+    )
+  })
+  
  
 }
   
