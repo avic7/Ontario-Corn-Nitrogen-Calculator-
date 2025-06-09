@@ -8,26 +8,26 @@ library(fontawesome)
 library(shinyWidgets)
 
 
+
 # UI 
 ui <- navbarPage(
   title = div(
-    span("OCNC", style = "margin-right: auto;"),
+    span("OCNC", style = "margin-right: auto; color: white; font-weight: bold;"),
     div(style = "position: absolute; right: 15px; top: 50%; transform: translateY(-50%); display: flex; align-items: center;",
-        tags$a(href = "https://github.com/yourusername", target = "_blank", 
-               style = "color: #999; font-size: 18px; margin: 0 8px; text-decoration: none;",
+        tags$a(href = "https://github.com/adriancorrendo/", target = "_blank", 
+               style = "color: white; font-size: 18px; margin: 0 8px; text-decoration: none;",
                tags$i(class = "fab fa-github")
         ),
-        tags$a(href = "https://twitter.com/yourusername", target = "_blank",
-               style = "color: #999; font-size: 18px; margin: 0 8px; text-decoration: none;", 
+        tags$a(href = "https://x.com/aacorrendo/", target = "_blank",
+               style = "color: white; font-size: 18px; margin: 0 8px; text-decoration: none;", 
                tags$i(class = "fab fa-twitter")
         ),
-        tags$a(href = "https://linkedin.com/in/yourusername", target = "_blank",
-               style = "color: #999; font-size: 18px; margin: 0 8px; text-decoration: none;",
+        tags$a(href = "https://www.linkedin.com/in/adriancorrendo/", target = "_blank",
+               style = "color: white; font-size: 18px; margin: 0 8px; text-decoration: none;",
                tags$i(class = "fab fa-linkedin")
         )
     )
   ),
-  theme = shinytheme("flatly"),
   fluid = TRUE,
   header = tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
@@ -41,27 +41,28 @@ ui <- navbarPage(
                column(width = 12,
                       div(
                         style = "display: flex;",
-                        tags$img(src = "corn.png", 
-                                 height = "60px", style = "margin-right: 30px;"),
+                        tags$img(src = "corn-cob.png", 
+                                 height = "100px", 
+                                 style = "margin-right: 5px; vertical-align: middle;"),
                         div(
                           tags$h1(
                             "Ontario Corn Nitrogen Calculator",
                             style = "
-               font-size:5rem; 
-               font-weight:700; 
-               line-height:1.2; 
-               margin-bottom:0.2rem; 
-               text-align:left;"
+                            font-size:5rem; 
+                            font-weight:700; 
+                            line-height:1.2; 
+                            margin-bottom:0.2rem; 
+                            text-align:left;"
                           ),
                           tags$h4(
                             "OMAFA General Recommended Nitrogen Rates for Corn", 
                             
                             style = "color:#6c757d; 
-               font-size:2rem; 
-               font-weight:400; 
-               margin-top:0; 
-               margin-bottom:2rem; 
-               text-align:left;"
+                            font-size:2rem; 
+                            font-weight:400; 
+                            margin-top:0; 
+                            margin-bottom:2rem; 
+                            text-align:left;"
                           )
                         )
                       )
@@ -112,7 +113,7 @@ ui <- navbarPage(
                                    uiOutput("vb_crop_2")
                             ),
                             column(3,
-                                   div(class = "card-input-title", "Yied (bu/ac)"),
+                                   div(class = "card-input-title", "Yield (bu/ac)"),
                                    numericInput("yield_adjustment", NULL,
                                                 value = 180, min = 70, max = 200, step = 10),
                                    uiOutput("vb_yield_1"),
@@ -156,6 +157,106 @@ ui <- navbarPage(
                )
              ),
              
+             # Price Ratio 
+             h2("Price Ratio Calculations"),
+             fluidRow(
+               column(width = 12,
+                      div(class = "input-card",
+                          # Western Ontario
+                          conditionalPanel(
+                            condition = "input.region == 'Western Ontario'",  
+                            fluidRow(
+                              column(4,
+                                     div(class = "card-input-title", "Expected corn price"),
+                                     numericInput("corn_price", NULL, value = 2.80, min = 0, step = 0.01)
+                              ),
+                              column(4,
+                                     div(class = "card-input-title", "Fertilizer product"),
+                                     selectInput("fertilizer_product", NULL,
+                                                 choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
+                                                             "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
+                                                 selected = "Urea")
+                              ),
+                              column(4,
+                                     div(class = "card-input-title", "Price per tonne of product"),
+                                     numericInput("fertilizer_price_tonne", NULL, value = 450, min = 0, step = 1)
+                              )
+                            )
+                          ),
+                          # Eastern Ontario
+                          conditionalPanel(
+                            condition = "input.region == 'Eastern Ontario'",
+                            fluidRow(
+                              column(2,
+                                     div(class = "card-input-title", "Expected corn price"),
+                                     numericInput("corn_price", NULL, value = 2.80, min = 0, step = 0.01)
+                              ),
+                              column(2,
+                                     div(class = "card-input-title", "Drying charges ($/bu)"),
+                                     numericInput("drying_charges", NULL, value = 0.35, min = 0, step = 0.01)
+                              ),
+                              column(3,
+                                     div(class = "card-input-title", "Transportation and marketing ($/bu)"),
+                                     numericInput("transport_marketing", NULL, value = 0.25, min = 0, step = 0.01)
+                              ),
+                              column(2,
+                                     div(class = "card-input-title", "Fertilizer product"),
+                                     selectInput("fertilizer_product", NULL,
+                                                 choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
+                                                             "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
+                                                 selected = "Urea",
+                                                 width = "100%")
+                              ),
+                              column(3,
+                                     div(class = "card-input-title", "Price per tonne of product"),
+                                     numericInput("fertilizer_price_tonne", NULL, value = 450, min = 0, step = 1)
+                              )
+                            )
+                          ),
+                          fluidRow(
+                            column(6,
+                                   div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Net Corn Price"),
+                                   div(style = "background: linear-gradient(135deg, var(--corn-gold), var(--corn-mature)); color: white; border: none; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("net_corn_price_output")
+                                   )
+                            ),
+                            column(6,
+                                   div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Nitrogen Price ($/lb actual N)"),
+                                   div(style = "background: linear-gradient(135deg, var(--healthy-crop), var(--spring-green)); color: white; border: none; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("nitrogen_price_output")
+                                   )
+                            )
+                          )))),
+             
+             # Price Ratio Adjustment 
+             h2("Price Ratio Adjustment"),
+             fluidRow(
+               column(width = 12,
+                      div(class = "input-card",
+                          fluidRow(
+                            column(4,
+                                   div(class = "card-input-title", "Price Ratio ($N:$corn)"),
+                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("price_ratio_value")
+                                   )
+                            ),
+                            column(4,
+                                   div(class = "card-input-title", "Imperial Adjustment"),
+                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("price_ratio_imperial")
+                                   )
+                            ),
+                            column(4,
+                                   div(class = "card-input-title", "Metric Adjustment"),
+                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+                                       textOutput("price_ratio_metric")
+                                   )
+                            )
+                          )
+                      )
+               )
+             )),
+             
              # Total Nitrogen Recommendation  
              h2("Total N Recommendation"),
              fluidRow(
@@ -164,14 +265,14 @@ ui <- navbarPage(
                           fluidRow(
                             column(6,
                                    uiOutput("vb_total_1"),
-                                   div(class = "card-input-title", "Imperial (lb/ac)"),
+                                   div(class = "card-input-title", "Imperial"),
                                    div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
                                        textOutput("total_n_imperial")
                                    )
                             ),
                             column(6,
                                    uiOutput("vb_total_2"),
-                                   div(class = "card-input-title", "Metric (kg/ha"),
+                                   div(class = "card-input-title", "Metric"),
                                    div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
                                        textOutput("total_n_metric")
                                    )
@@ -238,8 +339,7 @@ ui <- navbarPage(
                       )
                )
              ), 
-             
-             
+  
              #Fertilizer Management Split
              h2("Fertilizer Split"),
              fluidRow(
@@ -284,7 +384,8 @@ ui <- navbarPage(
                                    )
                             )
                           ),
-                          
+
+                                      
                           # "or" text
                           fluidRow(
                             column(12,
@@ -319,106 +420,7 @@ ui <- navbarPage(
                           )
                       )
                )
-             ),
-             
-             # Price Ratio 
-             h2("Price Ratio Calculations"),
-             fluidRow(
-               column(width = 12,
-                      div(class = "input-card",
-                          # Western Ontario
-                          conditionalPanel(
-                            condition = "input.region == 'Western Ontario'",  
-                            fluidRow(
-                              column(4,
-                                     div(class = "card-input-title", "Expected corn price"),
-                                     numericInput("corn_price", NULL, value = 2.80, min = 0, step = 0.01)
-                              ),
-                              column(4,
-                                     div(class = "card-input-title", "Fertilizer product"),
-                                     selectInput("fertilizer_product", NULL,
-                                                 choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
-                                                             "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
-                                                 selected = "Urea")
-                              ),
-                              column(4,
-                                     div(class = "card-input-title", "Price per tonne of product"),
-                                     numericInput("fertilizer_price_tonne", NULL, value = 450, min = 0, step = 1)
-                              )
-                            )
-                          ),
-                          # Eastern Ontario
-                          conditionalPanel(
-                            condition = "input.region == 'Eastern Ontario'",
-                            fluidRow(
-                              column(2,
-                                     div(class = "card-input-title", "Expected corn price"),
-                                     numericInput("corn_price", NULL, value = 2.80, min = 0, step = 0.01)
-                              ),
-                              column(2,
-                                     div(class = "card-input-title", "Drying charges ($/bu)"),
-                                     numericInput("drying_charges", NULL, value = 0.35, min = 0, step = 0.01)
-                              ),
-                              column(3,
-                                     div(class = "card-input-title", "Transportation and marketing ($/bu)"),
-                                     numericInput("transport_marketing", NULL, value = 0.25, min = 0, step = 0.01)
-                              ),
-                              column(2,
-                                     div(class = "card-input-title", "Fertilizer product"),
-                                     selectInput("fertilizer_product", NULL,
-                                                 choices = c("Ammonium Nitrate","Ammonium Sulphate","Anhydrous Ammonia",
-                                                             "Calcium Ammonium Nitrate","UAN (28-0-0)","Urea"),
-                                                 selected = "Urea")
-                              ),
-                              column(3,
-                                     div(class = "card-input-title", "Price per tonne of product"),
-                                     numericInput("fertilizer_price_tonne", NULL, value = 450, min = 0, step = 1)
-                              )
-                            )
-                          ),
-                          fluidRow(
-                            column(6,
-                                   div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Net Corn Price"),
-                                   div(style = "background: linear-gradient(135deg, var(--corn-gold), var(--corn-mature)); color: white; border: none; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
-                                       textOutput("net_corn_price_output")
-                                   )
-                            ),
-                            column(6,
-                                   div(class = "card-input-title", style = "font-weight: bold; font-size: 16px;", "Nitrogen Price ($/lb actual N)"),
-                                   div(style = "background: linear-gradient(135deg, var(--healthy-crop), var(--spring-green)); color: white; border: none; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
-                                       textOutput("nitrogen_price_output")
-                                   )
-                            )
-                          )))),
-             
-             # Price Ratio Adjustment 
-             h2("Price Ratio Adjustment"),
-             fluidRow(
-               column(width = 12,
-                      div(class = "input-card",
-                          fluidRow(
-                            column(4,
-                                   div(class = "card-input-title", "Price Ratio ($N:$corn)"),
-                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
-                                       textOutput("price_ratio_value")
-                                   )
-                            ),
-                            column(4,
-                                   div(class = "card-input-title", "Imperial Adjustment (lb/ac)"),
-                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
-                                       textOutput("price_ratio_imperial")
-                                   )
-                            ),
-                            column(4,
-                                   div(class = "card-input-title", "Metric Adjustment (kg/ha)"),
-                                   div(style = "background-color: white; color: black; border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
-                                       textOutput("price_ratio_metric")
-                                   )
-                            )
-                          )
-                      )
-               )
-             ))),
+             )),
 
   
   # About section 
@@ -495,7 +497,7 @@ ui <- navbarPage(
                       
                       # Corn Logo Attribution
                       p(style = "font-size: 16px; line-height: 1.6; color: #666; margin-top: 20px;",
-                        HTML('<a href="https://www.flaticon.com/free-icons/corn" title="corn icons" target="_blank" style="color: #2c5530; text-decoration: underline;">Corn icons created by Freepik - Flaticon</a>')
+                        HTML('<a href="https://www.flaticon.com/free-icons/agriculture" title="agriculture icons" target="_blank" style="color: #2c5530; text-decoration: underline;">Agriculture icons created by juicy_fish - Flaticon</a>')
                       )
                )
              ),             
@@ -518,7 +520,7 @@ ui <- navbarPage(
                                "https://github.com/avic7"
                         )
                       ),
-                      
+                     
                       p(style = "font-size: 16px; line-height: 1.6; color: #666; margin-bottom: 0; font-style: italic;",
                         "Chang, W., Cheng, J., Allaire, J.J., Xie, Y., and McPherson, J. (2021). ",
                         tags$em("shiny: Web Application Framework for R"),
