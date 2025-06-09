@@ -56,4 +56,4 @@ install.packages(c("shiny", "dplyr", "tidyr", "purrr", "ggplot2", "plotly"))
 
 # Preview
 
-![Image](https://github.com/user-attachments/assets/92b1eb24-ee9f-47a1-820d-0980cb6516f3)
+![Image](https://github.com/user-attachments/assets/d3611619-f7f9-4d16-8d9b-7ed956c85df6)
