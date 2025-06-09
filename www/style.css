@@ -1,6 +1,5 @@
 
       :root {
-        /* Agricultural Colors */
         --corn-gold: #F1C40F;          
         --corn-mature: #F39C12;     
         --fertile-soil: #8B4513;       
@@ -12,8 +11,35 @@
         --healthy-crop: #58D68D;       
         --prairie-beige: #D5DBDB;   
       }
+      
+      
+        /* Custom bootstrap shiny navbar */
+        .navbar-default {
+          background-color: #145A32 !important;
+          border-color: #145A32 !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        /* Making text white */
+        .navbar-default .navbar-brand,
+        .navbar-default .navbar-nav > li > a {
+          color: #fff !important;
+        }
+        
+        /* Hover effect */
+        .navbar-default .navbar-nav > li > a:hover {
+          color: #F1C40F !important; /* corn gold */
+        }
+        
+        /* tab color */
+        .navbar-default .navbar-nav > .active > a,
+        .navbar-default .navbar-nav > .active > a:focus,
+        .navbar-default .navbar-nav > .active > a:hover {
+          background-color: transparent !important;
+          color: #F1C40F !important;
+        }
 
-      /* Agricultured Theme small boxes*/
+
       .small-box {
         display: flex;
         flex-direction: column;
@@ -58,7 +84,7 @@
         opacity: 0.3;
       }
 
-      /* Agricultural Color Scheme for Value Boxes */
+      /*Value boxes */
       .bg-soil { 
         background: linear-gradient(135deg, var(--fertile-soil), #A0522D);
       }
@@ -82,6 +108,7 @@
       .bg-calculation {
         background: linear-gradient(135deg, var(--healthy-crop), var(--spring-green));
       }
+
 
       /* Input Cards */
       .input-card {
@@ -107,6 +134,7 @@
         margin-bottom: 25px;
       }
 
+
       /* Inputs Enhancement */
       .form-control:focus {
         border-color: var(--spring-green);
@@ -119,6 +147,7 @@
         margin-bottom: 8px;
       }
 
+
       /* Dropdown Styling */
       .selectize-input {
         border: 2px solid #E8F5E8;
@@ -129,12 +158,14 @@
         border-color: var(--spring-green);
       }
 
+
       /* Region Select */
       #region_select {
         border: 2px solid var(--corn-gold);
         border-radius: 8px;
         background-color: white;
       }
+
 
       /* Numeric Input Styling */
       input[type='number'] {
@@ -149,6 +180,7 @@
         box-shadow: 0 0 5px rgba(39, 174, 96, 0.3);
       }
 
+
       /* Card Input */
       .card-input-title {
         color: var(--forest-green);
@@ -156,6 +188,7 @@
         margin-bottom: 10px;
         font-size: 14px;
       }
+
 
       /* Responsive Design */
       @media (max-width: 768px) {
@@ -168,3 +201,13 @@
           font-size: 16px !important;
         }
       }
+      
+      
+      .selectize-control {
+  width: 100% !important;
+}
+.selectize-input {
+  width: 100% !important;
+}
+
+
