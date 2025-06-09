@@ -8,14 +8,14 @@ server <- function(input, output, session) {
   # Soil Selection Reactive
   selected_soil <- reactive({
     if (input$region == "Eastern Ontario") {
-      soil_eo %>% filter(tolower(trimws(.data[["Soil Type"]])) == tolower(trimws(input$soil_type)))
+      soil_eo |> filter(tolower(trimws(.data[["Soil Type"]])) == tolower(trimws(input$soil_type)))
     } else if (input$region == "Western Ontario") {
-      soil_wo %>% filter(tolower(trimws(.data[["Soil Type"]])) == tolower(trimws(input$soil_type)))
+      soil_wo |> filter(tolower(trimws(.data[["Soil Type"]])) == tolower(trimws(input$soil_type)))
     }
   })
   
   crop_adjustment <- reactive({
-    crop_adj %>% filter(.data[["Previous Crop"]] == input$previous_crop)
+    crop_adj |> filter(.data[["Previous Crop"]] == input$previous_crop)
   })
   
   # Yield Adjustment Calculation
@@ -35,15 +35,15 @@ server <- function(input, output, session) {
   
   # Previous Crop Adjustment
   crop_adjustment <- reactive({
-    crop_adj %>% filter(`Previous Crop` == input$previous_crop)
+    crop_adj |> filter(`Previous Crop` == input$previous_crop)
   })
   
   # Soil Base N (Imperial)
   output$vb_soil_1 <- renderUI({
     req(selected_soil())
     div(class = "small-box bg-soil",
-        div(class = "main-text", selected_soil()[[2]]),
-        div(class = "subtext", "Base N (lb/ac)"),
+        div(class = "main-text", paste0(selected_soil()[[2]], " lb/ac")),
+        div(class = "subtext", "Base N (Imperial)"),
         div(class = "icon", icon("seedling"))
     )
   })
@@ -52,8 +52,8 @@ server <- function(input, output, session) {
   output$vb_soil_2 <- renderUI({
     req(selected_soil())
     div(class = "small-box bg-soil",
-        div(class = "main-text", selected_soil()[[3]]),
-        div(class = "subtext", "Base N (kg/ha)"),
+        div(class = "main-text", paste0(selected_soil()[[3]], " kg/ha")),
+        div(class = "subtext", "Base N (Metric)"),
         div(class = "icon", icon("seedling"))
     )
   })
@@ -62,7 +62,7 @@ server <- function(input, output, session) {
   output$vb_yield_1 <- renderUI({
     req(target_yield())
     div(class = "small-box bg-yield",
-        div(class = "main-text", paste0(round(target_yield()$imperial, 1), " bu/ac")),
+        div(class = "main-text", paste0(round(target_yield()$imperial, 1), " lb/ac")),
         div(class = "subtext", "Yield (Imperial)"),
         div(class = "icon", icon("chart-line"))
     )
@@ -102,8 +102,8 @@ server <- function(input, output, session) {
   output$vb_crop_1 <- renderUI({
     req(crop_adjustment())
     div(class = "small-box bg-crop",
-        div(class = "main-text", crop_adjustment()[[2]]),
-        div(class = "subtext", "Previous Crop (lb/ac)"),
+        div(class = "main-text", paste(crop_adjustment()[[2]], "lb/ac")),
+        div(class = "subtext", "Previous Crop (Imperial)"),
         div(class = "icon", icon("leaf"))
     )
   })
@@ -112,8 +112,8 @@ server <- function(input, output, session) {
   output$vb_crop_2 <- renderUI({
     req(crop_adjustment())
     div(class = "small-box bg-crop",
-        div(class = "main-text", crop_adjustment()[[3]]),
-        div(class = "subtext", "Previous Crop(kg/ha)"),
+        div(class = "main-text",  paste(crop_adjustment()[[3]], "kg/ha")),
+        div(class = "subtext", "Previous Crop(Metric)"),
         div(class = "icon", icon("leaf"))
     )
   })
@@ -121,7 +121,7 @@ server <- function(input, output, session) {
   # N content for selected fertilizer
   get_n_content <- reactive({
     req(input$fertilizer_product)
-    selected_fertilizer <- fertilizer_data %>% 
+    selected_fertilizer <- fertilizer_data |> 
       filter(`Fertilizer Type` == input$fertilizer_product)
     
     if(nrow(selected_fertilizer) > 0) {
@@ -130,6 +130,8 @@ server <- function(input, output, session) {
       return(0)
     }
   })
+  
+  
   
   # Nitrogen price calculation
   output$nitrogen_price_output <- renderText({
@@ -156,6 +158,8 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  
   # Net corn price calculation
   output$net_corn_price_output <- renderText({
     req(input$corn_price)
@@ -172,6 +176,8 @@ server <- function(input, output, session) {
     paste0("$", round(net_price, 2))
   })
   
+  
+  
   # Reactive expression for net corn price
   net_corn_price <- reactive({
     req(input$corn_price)
@@ -184,6 +190,8 @@ server <- function(input, output, session) {
       return(input$corn_price)
     }
   })
+  
+  
   
   # Reactive expression for nitrogen price per lb
   nitrogen_price_per_lb <- reactive({
@@ -210,6 +218,8 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  
   # Price ratio calculation
   output$price_ratio_output <- renderText({
     req(nitrogen_price_per_lb(), net_corn_price())
@@ -222,6 +232,8 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  # Total N Recommendation (Imperial)
   total_n_imperial <- reactive({
     req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment(),precip_adjustment(),
         price_ratio_adjustment())
@@ -234,6 +246,8 @@ server <- function(input, output, session) {
       price_ratio_adjustment()$imperial
   })
   
+  
+  # Total N Recommendation (Metric)
   total_n_metric <- reactive({
     req(selected_soil(), target_yield(), heat_unit_adj(), crop_adjustment(),precip_adjustment(),
         price_ratio_adjustment())
@@ -245,6 +259,8 @@ server <- function(input, output, session) {
       as.numeric(precip_adjustment()$metric)+
       price_ratio_adjustment()$metric
   })
+  
+  
   
   # Backend calculation for Difference 
   difference <- reactive({
@@ -273,12 +289,16 @@ server <- function(input, output, session) {
     paste0(round(total_n_imperial(), 1), " lb/ac")
   })
   
+  
   # Reactive Total Nitrogen Recommendation (Metric)   
   output$total_n_metric <- renderText({
     req(total_n_metric())
     paste0(round(total_n_metric(), 1), " kg/ha")
   })
 
+  
+  
+  ## Fertilizer Split 
   # Preplant Additional N calculations
   preplant_additional_n <- reactive({
     req(difference(), input$split_percentage)
@@ -296,6 +316,8 @@ server <- function(input, output, session) {
     )
   })
   
+  
+  
   # SideDress Additional N calculations  
   sidedress_additional_n <- reactive({
     req(difference(), preplant_additional_n())
@@ -310,7 +332,8 @@ server <- function(input, output, session) {
     )
   })
   
-  # Updating output functions 
+  
+  # Updating output functions of preplant and sidedress 
   output$preplant_additional_n_imperial <- renderText({
     req(preplant_additional_n())
     paste0(round(preplant_additional_n()$imperial, 1), " lb/ac")
@@ -331,6 +354,7 @@ server <- function(input, output, session) {
     paste0(round(sidedress_additional_n()$metric, 1), " kg/ha")
   })
   
+  
   # Fertilizer Management Calculations
   output$starter_n_credit <- renderText({
     req(input$starter_n_imperial)
@@ -343,8 +367,7 @@ server <- function(input, output, session) {
   })
   
   
-  
-  # Price Ratio Adjustment Calculation
+  # Price Ratio  Calculation
   price_ratio <- reactive({
     req(nitrogen_price_per_lb(), net_corn_price())
     
@@ -354,6 +377,7 @@ server <- function(input, output, session) {
     
     return(ratio)
   })
+  
   
   # Reactive Price Ratio Adjustment
   price_ratio_adjustment <- reactive({
@@ -367,6 +391,7 @@ server <- function(input, output, session) {
     
     list(imperial = imperial_adj, metric = metric_adj)
   })
+  
   
   # Price Ratio Adjustment outputs
   output$price_ratio_value <- renderText({
@@ -395,7 +420,8 @@ server <- function(input, output, session) {
     list(imperial = imperial, metric = metric)
   })
   
-  # Value Box for Precipitation Imperial
+  
+  #  Precipitation Imperial
   output$vb_precip_1 <- renderUI({
     req(precip_adjustment())
     div(class = "small-box bg-nitrogen",
@@ -405,7 +431,8 @@ server <- function(input, output, session) {
     )
   })
   
-  # Value Box for Precipitation Metric
+  
+  # Precipitation Metric
   output$vb_precip_2 <- renderUI({
     req(precip_adjustment())
     div(class = "small-box bg-nitrogen",
