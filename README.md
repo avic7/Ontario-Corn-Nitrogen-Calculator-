@@ -51,4 +51,9 @@ install.packages(c("shiny", "dplyr", "tidyr", "purrr", "ggplot2", "plotly"))
 
 ## Acknowledgments
 - Ontario Ministry of Agriculture, Food and Rural Affairs (OMAFA) research data
-- University of Guelph 
+- University of Guelph
+
+
+# Preview
+
+![Image](https://github.com/user-attachments/assets/92b1eb24-ee9f-47a1-820d-0980cb6516f3)
