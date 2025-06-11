@@ -82,7 +82,7 @@ server <- function(input, output, session) {
   output$vb_heat_1 <- renderUI({
     req(heat_unit_adj())
     div(class = "small-box bg-heat",
-        div(class = "main-text", paste0(round(heat_unit_adj()$imperial, 1), " lbs N/ac")),
+        div(class = "main-text", paste0(round(heat_unit_adj()$imperial, 1), " lb N/ac")),
         div(class = "subtext", "Heat Units (Imperial)"),
         div(class = "icon", icon("temperature-high"))
     )
@@ -113,7 +113,7 @@ server <- function(input, output, session) {
     req(crop_adjustment())
     div(class = "small-box bg-crop",
         div(class = "main-text",  paste(crop_adjustment()[[3]], "kg/ha")),
-        div(class = "subtext", "Previous Crop(Metric)"),
+        div(class = "subtext", "Previous Crop (Metric)"),
         div(class = "icon", icon("leaf"))
     )
   })
