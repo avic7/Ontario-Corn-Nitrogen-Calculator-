@@ -1,9 +1,9 @@
 server <- function(input, output, session) {
   
-  soil_eo <- readxl::read_excel("SoilEO.xlsx")
-  soil_wo <- readxl::read_excel("SoilWO.xlsx")
-  crop_adj <- readxl::read_excel("PreviousCrop.xlsx")
-  fertilizer_data <- readxl::read_excel("Fertilizers.xlsx")
+  soil_eo <- readxl::read_excel("datasets/SoilEO.xlsx")
+  soil_wo <- readxl::read_excel("datasets/SoilWO.xlsx")
+  crop_adj <- readxl::read_excel("datasets/PreviousCrop.xlsx")
+  fertilizer_data <- readxl::read_excel("datasets/Fertilizers.xlsx")
   
   # Soil Selection Reactive
   selected_soil <- reactive({
