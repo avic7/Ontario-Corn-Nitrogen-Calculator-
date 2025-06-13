@@ -297,7 +297,7 @@ ui <- navbarPage(
              ),
              
              # Fertilizer Management 
-             h2("Ferilizer Management"),
+             h2("Fertilizer Management"),
              fluidRow(
                column(width = 12,
                       div(class = "input-card",
