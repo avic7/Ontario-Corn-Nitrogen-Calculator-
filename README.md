@@ -54,7 +54,7 @@ install.packages(c("shiny", "dplyr", "tidyr", "purrr", "ggplot2", "plotly"))
 - University of Guelph
 
 
-## Visit this app on https://uogcrops.shinyapps.io/ocnc/ 
+## Visit this app on : https://uogcrops.shinyapps.io/ocnc/ 
 
 
 
