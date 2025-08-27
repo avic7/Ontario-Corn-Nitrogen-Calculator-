@@ -1,4 +1,4 @@
-# Ontario Corn Nitrogen Calculator Modernization and Dashboard 
+# Ontario Corn Nitrogen Calculator Modernization 
 
 ## Overview
 This project modernizes the existing Ontario Corn Nitrogen Calculator Tool by building an **interactive R Shiny app and also a dashboard**. It provides Ontario farmers, advisors, and researchers with user-friendly access to a **historical database of nitrogen fertilization trials** in corn, helping drive **data-informed decisions** on nitrogen application.
