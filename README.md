@@ -1,9 +1,7 @@
 # Ontario Corn Nitrogen Calculator Modernization 
 
 ## Overview
-This project modernizes the existing Ontario Corn Nitrogen Calculator Tool by building an **interactive R Shiny app and also a dashboard**. It provides Ontario farmers, advisors, and researchers with user-friendly access to a **historical database of nitrogen fertilization trials** in corn, helping drive **data-informed decisions** on nitrogen application.
-
-The dashboard visualizes nitrogen response trends and calculates the **Most Economical Rate of Nitrogen (MERN)** based on updated non-linear regression models and research data.
+This project modernizes the existing Ontario Corn Nitrogen Calculator Tool by building an **interactive R Shiny app and also a dashboard**. It provides Ontario farmers, advisors, and researchers an opportunity to make nitrogen recommendations smarter, more interactive and data driven.
 
 
 ## Features
@@ -13,27 +11,20 @@ The dashboard visualizes nitrogen response trends and calculates the **Most Econ
   - Corn price
   - Fertilizer cost
   - Target yield
-- **Data Visualizations**: Interactive graphs using `ggplot2` and `plotly`.
-- **Modeling**: Non-linear regression (`nls()`) to estimate MERN using quadratic-plateau models.
 - **Dual Units**: Output available in both **Metric** and **Imperial** units.
-- **Historical Dataset**: Leverages decades of Ontario agronomic research data with spatial (location) and temporal (year) dimensions.
 - **Version Control**: Project managed and updated via GitHub.
 
 
 ## Tech Stack
-- **R**, **RStudio**
-- **R Shiny** (UI + Server Logic)
-- **dplyr**, **tidyr**,(Data Wrangling)
-- **ggplot2**, **plotly** (Visualizations)
-- **nls()** (Non-linear Regression Modeling)
+- **Technology used**  Base Rshiny
+- **Structure** Modularized using key files like app.R, ui.R, and server.R
+- **Benefits** 
+Easy and straightforward app deployment.
+Clearly structured separation of UI and Server logic.
+Rapid interactivity and reactive updates to user inputs.
+Strong compatibility with R statistical packages and models.
+
 - **GitHub** (Version Control)
-
-
-## Data Science Techniques
-- Merging and harmonizing agronomic research datasets.
-- Aggregating data at regional, county, and year levels.
-- Refining non-linear regression models to calculate MERN.
-- Building interactive visualizations to communicate insights effectively.
 
 
 ## Installation
