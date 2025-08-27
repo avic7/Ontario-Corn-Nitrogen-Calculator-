@@ -16,13 +16,13 @@ This project modernizes the existing Ontario Corn Nitrogen Calculator Tool by bu
 
 
 ## Tech Stack
-- **Technology used**  Base Rshiny
-- **Structure** Modularized using key files like app.R, ui.R, and server.R
-- **Benefits** 
-Easy and straightforward app deployment.
-Clearly structured separation of UI and Server logic.
-Rapid interactivity and reactive updates to user inputs.
-Strong compatibility with R statistical packages and models.
+- **Technology used**: Base Rshiny
+- **Structure**: Modularized using key files like app.R, ui.R, and server.R
+- **Benefits**: 
+  - Easy and straightforward app deployment.
+  - Clearly structured separation of UI and Server logic.
+  - Rapid interactivity and reactive updates to user inputs.
+  - Strong compatibility with R statistical packages and models.
 
 - **GitHub** (Version Control)
 
