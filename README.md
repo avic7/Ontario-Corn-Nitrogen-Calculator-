@@ -1,59 +1,100 @@
-# Ontario Corn Nitrogen Calculator Modernization 
+# Ontario Corn Nitrogen Calculator 
+
+Farmers across Ontario rely on the Ontario Corn Nitrogen Calculator (OCNC) for fertilizer decisions. However, the existing tool lacked interactivity, modern visualization, and the ability to leverage six decades of agronomic trials. This project aimed to: 
+
+- Modernize the OCNC
+- Visualize over 7,600 data points across 667 site-years
+- Enable smarter, region-specific, and yield-specific N recommendations
+- Create a new dashboard to visualize the historical data. 
+
 
 ## Overview
-This project modernizes the existing Ontario Corn Nitrogen Calculator Tool by building an **interactive R Shiny app and also a dashboard**. It provides Ontario farmers, advisors, and researchers an opportunity to make nitrogen recommendations smarter, more interactive and data driven.
+
+This project modernizes how nitrogen (N) recommendations are generated for corn farmers in Ontario. For decades, growers relied on the Ontario Corn Nitrogen Calculator (OCNC), a static tool that offered limited flexibility. My goal was to redesign the calculator into a data-driven, interactive RShiny application and complement it with a historical nitrogen database dashboard that visualizes over 60 years of agronomic trial data.
+
+## Problem Statement
+
+Farmers face rising input costs and variable yields. The traditional OCNC provided generalized recommendations but:
+
+- Lacked interactivity and flexibility.
+- Did not leverage historical trial data fully.
+- Failed to incorporate metadata (e.g., soil type, previous crops, tillage practices).
+
+This created uncertainty in fertilizer planning and limited the ability to tailor nitrogen strategies.
+
+## Objectives
+
+- Integrate and modernize agronomic trial data (1962–2024, 7,600+ data points).
+- Identify limitations and gaps in existing recommendations.
+- Redesign the OCNC into a modern, modularized RShiny app.
+- Build a historical nitrogen database dashboard for visualization and exploration.
+- Enable farmers and agronomists to make data-driven fertilizer decisions.
 
 
-## Features
-- **Farmer-Focused**: Easy-to-use UI with input options for:
-  - Soil type
-  - Previous crop
-  - Corn price
-  - Fertilizer cost
-  - Target yield
-- **Dual Units**: Output available in both **Metric** and **Imperial** units.
-- **Version Control**: Project managed and updated via GitHub.
+## Data Insights
+
+### Database scope:
+
+- 1962–2024, 7,608 data points, ~667 site-years.
+- 951 nitrogen response curves across multiple yield levels.
 
 
-## Tech Stack
-- **Technology used**: Base Rshiny
-- **Structure**: Modularized using key files like app.R, ui.R, and server.R
-- **Benefits**: 
-  - Easy and straightforward app deployment.
-  - Clearly structured separation of UI and Server logic.
-  - Rapid interactivity and reactive updates to user inputs.
-  - Strong compatibility with R statistical packages and models.
 
-- **GitHub** (Version Control)
+### Key findings:
+
+- Higher yield potential (≥200 bu/ac) dominates trials since 2010.
+- Metadata gaps remain: tillage, planting dates, soil tests often missing.
+- Many trials discarded due to incomplete experimental designs.
+
+## Impact
+
+- Smarter Recommendations: Farmers receive more tailored nitrogen rate suggestions based on yield potential, region, and historical evidence.
+- Interactive Decision-Making: Users can run “what-if” scenarios (e.g., changing fertilizer prices or soil conditions).
+- Transparency & Accessibility: Farmers can visualize six decades of agronomic trials and even export data for their own analysis.
 
 
-## Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/ontario-corn-nitrogen-calculator.git
-cd ontario-corn-nitrogen-calculator
+## OCNC Calculator
 
-# Open the project in RStudio
-# Install necessary R packages
-install.packages(c("shiny", "dplyr", "tidyr", "purrr", "ggplot2", "plotly"))
-```
+#### Before <br/> 
+
+<img width="469" height="456" alt="image" src="https://github.com/user-attachments/assets/67f1ff2c-de92-4a14-9bb1-d0919c04a307" />
+
+
+
+
+#### After <br/>
+
+<img width="635" height="343" alt="image" src="https://github.com/user-attachments/assets/18fd6232-c268-4b10-b127-807915279938" />
+
+
+
+## Historical Ontario Corn Nitrogen Database Dashboard ( Under Development ) 
+
+
+<img width="854" height="414" alt="image" src="https://github.com/user-attachments/assets/83cae6f0-e32c-4b9d-b830-12984514d6fb" /> <br/> 
+
+
+<img width="894" height="437" alt="image" src="https://github.com/user-attachments/assets/4c09206c-0b92-467b-bff6-a88b688a7b13" />
+
+
+
+
+### Future Directions
+
+- Finalize dashboard components and integrate economic outcomes (profitability of nitrogen strategies).
+- Enable secure CSV export for farmers and advisors.
+- Add a login system for personalized data tracking.
+- Conduct extensive user testing with OMAFRA and Ontario farmers for feedback and refinement.
+
 
 
 ## Acknowledgments
-- Ontario Ministry of Agriculture, Food and Rural Affairs (OMAFA) research data
-- University of Guelph
 
-
-## Visit this app on : https://uogcrops.shinyapps.io/ocnc/ 
-
-
-
-
-# Preview
-
-<img width="1710" height="989" alt="image" src="https://github.com/user-attachments/assets/03e37af1-2e56-43c2-8557-207c6ee7ec09" />
-<img width="1710" height="975" alt="image" src="https://github.com/user-attachments/assets/55e4f25e-f283-47e6-b1ba-895287251535" />
-<img width="1710" height="867" alt="image" src="https://github.com/user-attachments/assets/a25c6f34-ec7f-420e-9a40-e1b10c87cb12" />
+- Dr. Adrian Correndo – Project Supervisor
+- Dr. John Sulik – Secondary Supervisor
+- OMAFA – Data Support
+- University of Guelph, Dept. of Math & Stats
+- Ben Rosser (OMAFA)
 
 
