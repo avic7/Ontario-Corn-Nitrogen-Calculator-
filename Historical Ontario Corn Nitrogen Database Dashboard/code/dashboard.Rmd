@@ -1,0 +1,1573 @@
+---
+title: "NCorn"
+output: 
+  flexdashboard::flex_dashboard:
+        orientation: columns
+        vertical_layout: fill
+        navbar:
+           - { icon: "fa-github", href: "https://github.com/adriancorrendo/", align: right }
+           - { icon: "fa-twitter", href: "https://twitter.com/aacorrendo/", align: right}
+           - { icon: "fa-linkedin", href: "https://www.linkedin.com/in/adriancorrendo/", align: right}
+        theme:
+            bg: "#f7f5ed"
+            fg: "#2e2e2e"
+            primary: "#4d774e"
+            navbar-bg: "#3e5c3a"
+            base_font: !expr bslib::font_google("Lato")
+        css : style.css
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+
+library(pacman)
+
+# Dashboard & Shiny - KEEP THESE
+p_load(flexdashboard, shiny, shinyWidgets, shinyjs, bslib)
+
+# Data wrangling - KEEP THESE
+p_load(readxl, dplyr, tidyr, stringr, scales, purrr, tibble)
+
+# Plots - KEEP THESE
+p_load(ggplot2, ggbeeswarm, forcats)
+
+# Maps - KEEP THESE  
+p_load(leaflet, sf)
+
+# Font Awesome CSS
+tags$style("@import url(https://use.fontawesome.com/releases/v6.1.1/css/all.css);")
+```
+
+
+
+#  Main {data-orientation="columns"}
+```{r, include=FALSE}
+useShinyjs()
+
+# Loading Data
+NCorn_private <- read_excel("data/N_corn_08042025.xlsx")
+
+
+# Create sf 
+NCorn_sf <- st_as_sf(NCorn_private,
+                     coords = c("sample_lon", "sample_lat"),
+                     crs = 4326) %>%
+  mutate(
+    UPPER_TIER_MUNICIPALITY = str_trim(UPPER_TIER_MUNICIPALITY)
+  )
+
+# Loading Ontario counties map
+ontario_counties_path <- "geojson/ontario_counties_map.geojson"
+ontario_counties_full <- suppressMessages(st_read(ontario_counties_path, quiet = TRUE))
+
+# Counties with data
+counties_with_data <- c(
+  "CHATHAM-KENT",
+  "BRANT",
+  "COUNTY OF BRUCE", 
+  "COUNTY OF ELGIN",
+  "COUNTY OF ESSEX",
+  "COUNTY OF HURON",
+  "COUNTY OF LAMBTON",
+  "COUNTY OF LANARK",
+  "COUNTY OF MIDDLESEX",
+  "COUNTY OF NORTHUMBERLAND",
+  "COUNTY OF OXFORD",
+  "COUNTY OF PERTH",
+  "COUNTY OF RENFREW",
+  "COUNTY OF SIMCOE",
+  "COUNTY OF WELLINGTON",
+  "HALDIMAND COUNTY",
+  "HAMILTON",
+  "KAWARTHA LAKES",
+  "LONDON",
+  "NORFOLK COUNTY",
+  "OTTAWA",
+  "QUINTE WEST",
+  "REGIONAL MUNICIPALITY OF HALTON",
+  "REGIONAL MUNICIPALITY OF NIAGARA",
+  "REGIONAL MUNICIPALITY OF PEEL",
+  "REGIONAL MUNICIPALITY OF WATERLOO",
+  "TEMISKAMING SHORES",
+  "UNITED COUNTIES OF LEEDS AND GRENVILLE",
+  "UNITED COUNTIES OF PRESCOTT AND RUSSELL",
+  "UNITED COUNTIES OF STORMONT, DUNDAS AND GLENGARRY"
+)
+
+# Mapping between counties in dataset and ontario counties map 
+county_mapping <- data.frame(
+  UPPER_TIER_MUNICIPALITY = c(
+    "CHATHAM-KENT",
+    "COUNTY OF BRANT", 
+    "COUNTY OF BRUCE",
+    "COUNTY OF ELGIN",
+    "COUNTY OF ESSEX",
+    "COUNTY OF HURON",
+    "COUNTY OF LAMBTON",
+    "COUNTY OF LANARK",
+    "COUNTY OF MIDDLESEX",
+    "COUNTY OF NORTHUMBERLAND",
+    "COUNTY OF OXFORD",
+    "COUNTY OF PERTH",
+    "COUNTY OF RENFREW",
+    "COUNTY OF SIMCOE",
+    "COUNTY OF WELLINGTON",
+    "HALDIMAND COUNTY",
+    "HAMILTON",
+    "KAWARTHA LAKES",
+    "LONDON",
+    "NORFOLK COUNTY",
+    "OTTAWA",
+    "QUINTE WEST",
+    "REGIONAL MUNICIPALITY OF HALTON",
+    "REGIONAL MUNICIPALITY OF NIAGARA",
+    "REGIONAL MUNICIPALITY OF PEEL",
+    "REGIONAL MUNICIPALITY OF WATERLOO",
+    "TEMISKAMING SHORES",
+    "UNITED COUNTIES OF LEEDS AND GRENVILLE",
+    "UNITED COUNTIES OF PRESCOTT AND RUSSELL",
+    "UNITED COUNTIES OF STORMONT, DUNDAS AND GLENGARRY"
+  ),
+  County = counties_with_data,
+  stringsAsFactors = FALSE
+)
+
+# Getting map county name from dataset county name
+get_map_county_name <- function(upper_tier_name) {
+  if (is.null(upper_tier_name) || upper_tier_name == "") {
+    return(NULL)
+  }
+  
+  mapping_row <- county_mapping[county_mapping$UPPER_TIER_MUNICIPALITY ==
+                                  upper_tier_name, ]
+  if (nrow(mapping_row) > 0) {
+    return(mapping_row$County)
+  }
+  return(NULL)
+}
+
+# Filter Ontario counties map to only include counties with data
+ontario_counties_map <- ontario_counties_full %>%
+  filter(County %in% counties_with_data)
+
+```
+
+## Column {data-width="150"}
+
+### Filters
+
+```{r}
+
+div(class = "filters-column",
+    
+    # Filter inputs
+    # County filter 
+    selectInput("county_input", "Select County:",
+                choices = c("All", sort(county_mapping$UPPER_TIER_MUNICIPALITY)),
+                selected = "All"),
+    
+    # Year filter 
+    sliderInput("year_input", "Select Year:",
+                min = min(NCorn_sf$year, na.rm = TRUE),
+                max = max(NCorn_sf$year, na.rm = TRUE),
+                value = c(min(NCorn_sf$year), max(NCorn_sf$year)),
+                sep = ""),
+    
+    # Soil filter
+    selectInput("soil_input", "Select Soil Type:",
+                choices = c("All",
+                        sort(unique(NCorn_sf$soiltext[!is.na(NCorn_sf$soiltext)]))),
+                selected = "All"),
+    
+    # Previous Crop filter
+    selectInput("crop_input", "Select Previous Crop:",
+                choices = c("All",
+                        sort(unique(NCorn_sf$prevcrop[!is.na(NCorn_sf$prevcrop)]))),
+                selected = "All"),
+    
+    # Reset button
+    div(class = "reset-btn-container",
+        actionButton("reset_filters", "Reset Filters")
+    )
+)
+
+# Reset Button Observer
+observeEvent(input$reset_filters, {
+  updateSelectInput(session, "county_input", selected = "All")
+  updateSliderInput(session, "year_input", 
+                    value = c(min(NCorn_sf$year, na.rm = TRUE), 
+                             max(NCorn_sf$year, na.rm = TRUE)))
+  updateSelectInput(session, "soil_input", selected = "All")
+  updateSelectInput(session, "crop_input", selected = "All")
+})
+```
+
+## Column {data-width="650"}
+
+### Map and Summary
+
+```{r, message=FALSE, warning=FALSE}
+
+# Filter trial points based on all inputs 
+filteredTrials <- reactive({
+  data <- NCorn_sf
+  
+  # Debuging  
+  cat("Original data size:", nrow(data), "\n")
+  
+  # Year range filtering
+  if (!is.null(input$year_input)) {
+    data <- data %>%
+      filter(year >= input$year_input[1], year <= input$year_input[2])
+    cat("After year filter:", nrow(data), "\n")
+  }
+  
+  # County filtering 
+  if (!is.null(input$county_input) && input$county_input != "All") {
+    data <- data %>% filter(UPPER_TIER_MUNICIPALITY == input$county_input)
+    cat("After county filter:", nrow(data), "for county:", input$county_input, "\n")
+  }
+
+  # Soil type filtering
+  if (!is.null(input$soil_input) && input$soil_input != "All") {
+    data <- data %>% filter(soiltext == input$soil_input)
+    cat("After soil filter:", nrow(data), "\n")
+  }
+
+  # Previous Crop filtering
+  if (!is.null(input$crop_input) && input$crop_input != "All") {
+    data <- data %>% filter(prevcrop == input$crop_input)
+    cat("After crop filter:", nrow(data), "\n")
+  }
+
+  return(data)
+})
+
+# Data Summary 
+summary_stats <- reactive({
+  filtered_data <- filteredTrials()
+  
+  if (nrow(filtered_data) == 0) {
+    return(NULL)
+  }
+  
+  # Total trials
+  total_trials <- nrow(filtered_data)
+  
+  # Count distinct values, excluding NA
+  distinct_soil_types <- filtered_data %>%
+    filter(!is.na(soiltext)) %>%
+    pull(soiltext) %>%
+    unique() %>%
+    length()
+  
+  distinct_prev_crops <- filtered_data %>%
+    filter(!is.na(prevcrop)) %>%
+    pull(prevcrop) %>%
+    unique() %>%
+    length()
+
+  # Return the list 
+  list(
+    total_trials = total_trials,
+    earliest_year = min(filtered_data$year, na.rm = TRUE),
+    latest_year = max(filtered_data$year, na.rm = TRUE),
+    distinct_soil_types = distinct_soil_types,
+    distinct_prev_crops = distinct_prev_crops
+  )
+})
+
+
+# Leaflet Map Output 
+output$trialMap <- renderLeaflet({
+  selected_map_county <- get_map_county_name(input$county_input)
+  
+  # Base map with counties 
+  base_map <- leaflet() %>%
+    addProviderTiles("CartoDB.Positron")
+  
+  # Polygons with conditional styling for data counties only
+  if (!is.null(selected_map_county) && selected_map_county %in% ontario_counties_map$County) {
+    # Light color for non selected counites
+    base_map <- base_map %>%
+      addPolygons(
+        data = ontario_counties_map[ontario_counties_map$County!=selected_map_county, ],
+        weight = 1,
+        color = "black",
+        fillColor = "#e6e6e6",
+        fillOpacity = 0.3,
+        smoothFactor = 0.2,
+        group = "non_selected",
+        highlight = highlightOptions(
+          weight = 2,
+          color = "#666",
+          bringToFront = TRUE
+        ),
+        label = ~County
+      ) %>%
+      
+      # Green color for selected county
+      addPolygons(
+        data = ontario_counties_map[ontario_counties_map$County==selected_map_county, ],
+        weight = 2,
+        color = "#4d774e",
+        fillColor = "#4d774e",
+        fillOpacity = 0.7,
+        smoothFactor = 0.2,
+        group = "selected",
+        highlight = highlightOptions(
+          weight = 3,
+          color = "#2d4a2e",
+          bringToFront = TRUE
+        ),
+        label = ~County
+      )
+  } else {
+    # All counties with data
+    base_map <- base_map %>%
+      addPolygons(
+        data = ontario_counties_map,
+        weight = 1,
+        color = "black",
+        fillColor = "#e6e6e6",
+        fillOpacity = 0.2,
+        smoothFactor = 0.2,
+        group = "all_counties",
+        highlight = highlightOptions(
+          weight = 2,
+          color = "#666",
+          bringToFront = TRUE
+        ),
+        label = ~County
+      )
+  }
+  
+  return(base_map)
+})
+
+# Map elements observer 
+observe({
+  selected_map_county <- get_map_county_name(input$county_input)
+  
+  # Getting trial points 
+  trial_points <- filteredTrials() %>%
+    group_by(trial_id) %>%
+    slice(1) %>%
+    ungroup() %>%
+    filter(!st_is_empty(geometry)) %>%
+    st_transform(4326)
+  
+  # Clear existing layers
+  leafletProxy("trialMap") %>%
+    clearShapes() %>%
+    clearMarkers()
+  
+  # Add data counties
+  leafletProxy("trialMap") %>%
+    {
+      if (!is.null(selected_map_county) && selected_map_county %in%
+          ontario_counties_map$County) {
+        # Add non-selected counties with data 
+        addPolygons(.,
+          data = ontario_counties_map[ontario_counties_map$County != selected_map_county, ],
+          weight = 1,
+          color = "black",
+          fillColor = "#e6e6e6",
+          fillOpacity = 0.3,
+          smoothFactor = 0.2,
+          group = "non_selected",
+          highlight = highlightOptions(
+            weight = 2,
+            color = "#666",
+            bringToFront = FALSE,
+            sendToBack = FALSE
+          ),
+          label = ~County
+        ) %>%
+          
+        # Add selected county
+        addPolygons(
+          data = ontario_counties_map[ontario_counties_map$County == selected_map_county, ],
+          weight = 2,
+          color = "#4d774e",
+          fillColor = "#4d774e",
+          fillOpacity = 0.4,
+          smoothFactor = 0.2,
+          group = "selected",
+          highlight = highlightOptions(
+            weight = 3,
+            color = "#2d4a2e",
+            bringToFront = FALSE,
+            sendToBack = FALSE
+          ),
+          label = ~County
+        )
+      } else {
+        # Add all counties with data
+        addPolygons(.,
+          data = ontario_counties_map,
+          weight = 1,
+          color = "black",
+          fillColor = "#e6e6e6",
+          fillOpacity = 0.2,
+          smoothFactor = 0.2,
+          group = "all_counties",
+          highlight = highlightOptions(
+            weight = 2,
+            color = "#666",
+            bringToFront = FALSE,
+            sendToBack = FALSE
+          ),
+          label = ~County
+        )
+      }
+    }
+  
+  # Add trial points AFTER polygons
+  if (nrow(trial_points) > 0) {
+    leafletProxy("trialMap", data = trial_points) %>%
+      addCircleMarkers(
+        radius = 6,
+        fillColor = "#FF6B35",
+        color = "white",
+        weight = 3,
+        fillOpacity = 1,
+        opacity = 1,
+        popup = ~paste0("<b>Trial ID:</b> ", trial_id, "<br>",
+                        "<b>County:</b> ", UPPER_TIER_MUNICIPALITY, "<br>",
+                        "<b>Year:</b> ", year, "<br>",
+                        "<b>Soil:</b> ", soiltext, "<br>",
+                        "<b>Previous Crop:</b> ", prevcrop)
+      )
+  }
+})
+
+# Observer for county selection and zoom
+observeEvent(input$county_input, {
+  selected_map_county <- get_map_county_name(input$county_input)
+  
+  if (!is.null(selected_map_county) && selected_map_county != "" && selected_map_county %in% ontario_counties_map$County) {
+    selected_county_data <- ontario_counties_map[ontario_counties_map$County == selected_map_county, ]
+    
+    if (nrow(selected_county_data) > 0) {
+      county_wgs84 <- st_transform(selected_county_data, 4326)
+      bounds <- st_bbox(county_wgs84)
+      # Map zoom for selected county
+      leafletProxy("trialMap") %>%
+        fitBounds(
+          lng1 = bounds[1],
+          lat1 = bounds[2],
+          lng2 = bounds[3],
+          lat2 = bounds[4]
+        )
+    }
+  } else {
+    # When None selected show all counties 
+    if (nrow(ontario_counties_map) > 0) {
+      data_counties_wgs84 <- st_transform(ontario_counties_map, 4326)
+      data_bbox <- st_bbox(data_counties_wgs84)
+      leafletProxy("trialMap") %>%
+        fitBounds(
+          lng1 = data_bbox[1],
+          lat1 = data_bbox[2],
+          lng2 = data_bbox[3],
+          lat2 = data_bbox[4]
+        )
+    }
+  }
+})
+
+# Summary Panel Output
+output$summaryPanel <- renderUI({
+  stats <- summary_stats()
+  
+  if (is.null(stats)) {
+    return(
+      div(class = "summary-panel",
+          div(class = "summary-container",
+              div(class = "summary-title", 
+                  h3("Data Summary")),
+              div(class = "no-data-message", "No data matches the selected filters")
+          )
+      )
+    )
+  }
+  
+  div(class = "summary-panel",
+      div(class = "summary-container",
+          # Title on the left
+          div(class = "summary-title", 
+              h3("Data Summary")),
+          
+          # 2x2 Grid
+          div(class = "summary-grid",
+              div(class = "summary-item",
+                  span(class = "summary-label", "Total Trials:"),
+                  span(class = "summary-value", stats$total_trials)
+              ),
+              div(class = "summary-item",
+                  span(class = "summary-label", "Year Range:"),
+                  span(class = "summary-value", paste(stats$earliest_year, "-", stats$latest_year))
+              ),
+              div(class = "summary-item",
+                  span(class = "summary-label", "Soil Types:"),
+                  span(class = "summary-value", stats$distinct_soil_types)
+              ),
+              div(class = "summary-item",
+                  span(class = "summary-label", "Previous Crops:"),
+                  span(class = "summary-value", stats$distinct_prev_crops)
+              )
+          )
+      )
+  )
+})
+
+
+# Map layout 
+div(
+  div(style = "height: 310px; margin-bottom: 15px;",
+      leafletOutput("trialMap", height = "100%")
+  ),
+  uiOutput("summaryPanel")
+)
+
+observe({
+  input$`flexdashboard-navbar`  
+  runjs("setTimeout(function() {
+           window.dispatchEvent(new Event('resize'));
+         }, 500);")
+})
+```
+
+
+# Curves {data-orientation="columns"}
+
+```{r, include=FALSE}
+
+# Data processing for Curves section with quadratic-plateau model
+# Generate Yi data for plotting curves
+Yi <- read_excel("data/qp_clean.xlsx") %>%
+  # Select necessary columns and group by curve_id and prevcrop_group
+  select(curve_id, prevcrop_group, maxrate_curve, b0, b1, b2, aonr, 
+         trial_id, year, decade, yieldlevel, soiltext, UPPER_TIER_MUNICIPALITY) %>%
+  
+  # Group by curve_id and prevcrop_group  
+  group_by(curve_id, prevcrop_group) %>%
+  # Generate sequence of Xi values from 0 to maxrate_curve
+  mutate(data = purrr::map(maxrate_curve, ~data.frame(Xi = seq(0, .x, by = 0.5)))) %>%
+  # Unnest to get individual Xi values
+  unnest(cols = data) %>%
+  # Calculate Yi based on the plateau function
+  mutate(
+    Yi = case_when(
+      Xi < aonr ~ b0 + b1 * Xi + b2 * (Xi^2),  
+      Xi >= aonr ~ b0 + b1 * aonr + b2 * (aonr^2), 
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  # Convert to other units if needed
+  mutate(
+    Xi_lbs = Xi * 0.89,  # Convert kg/ha to lbs/ac
+    Yi_bu = Yi * 0.01593  # Convert kg/ha to bu/ac
+  ) %>%
+  ungroup()
+  # Remove rows with invalid data
+  #filter(!is.na(Yi_bu), !is.na(Xi_lbs), !is.na(prevcrop_group), !is.na(soiltext))
+```
+
+## Column {data-width="150"}
+
+### Filters
+```{r}
+
+div(class = "filters-column",
+    
+    # County Filter
+div(class = "form-group",
+    strong("County:"),
+    br(),
+    pickerInput("curves_county_input", 
+                label = NULL,
+                choices = c("All", sort(unique(Yi$UPPER_TIER_MUNICIPALITY[!is.na(Yi$UPPER_TIER_MUNICIPALITY)]))),
+                selected = "All",
+                multiple = TRUE,
+                options = list(
+                  `max-options` = 3,
+                  `actions-box` = TRUE,
+                  `selected-text-format` = "count > 2",
+                  `width` = "100%",
+                  `container` = FALSE,
+                  `dropup-auto` = FALSE,
+                  `size` = 6
+                ))
+),
+    
+    # Previous Crop Filter
+    div(class = "form-group",
+        strong("Previous Crop:"),
+        br(),
+        pickerInput("curves_prevcrop_input", 
+                    label = NULL,
+                    choices = c("All", sort(unique(Yi$prevcrop_group[!is.na(Yi$prevcrop_group)]))),
+                    selected = "All",
+                    multiple = TRUE,
+                    options = list(
+                      `max-options` = 3,  
+                      `actions-box` = TRUE,
+                      `selected-text-format` = "count > 2",
+                      `width` = "100%",
+                      `container` = FALSE,
+                      `dropup-auto` = FALSE,
+                      `size` = 6
+                    ))
+    ),
+    
+    # Yield Level Filter  
+    div(class = "form-group",
+    strong("Yield Level:"),
+    br(),
+    pickerInput("curves_yieldlevel_input",
+                label = NULL,
+                choices = c("All", 
+                           "High (>= 200)" = "High",
+                           "Medium (150-200)" = "Medium", 
+                           "Low (< 150)" = "Low"),
+                selected = "All",
+                multiple = TRUE,
+                options = list(
+                  `max-options` = 3,
+                  `actions-box` = TRUE,
+                  `selected-text-format` = "count > 2",
+                  `width` = "100%",
+                  `container` = FALSE,
+                  `dropup-auto` = FALSE,
+                  `size` = 4
+                ))
+),
+    
+    # Decade Filter
+    div(class = "form-group",
+        strong("Decade:"),
+        br(),
+        pickerInput("curves_decade_input",
+                    label = NULL,
+                    choices = c("All", sort(unique(Yi$decade[!is.na(Yi$decade)]))),
+                    selected = "All",
+                    multiple = TRUE,
+                    options = list(
+                      `max-options` = 6,
+                      `actions-box` = TRUE,
+                      `selected-text-format` = "count > 2",
+                      `width` = "100%",
+                      `container` = FALSE,
+                      `dropup-auto` = FALSE,
+                      `size` = 6
+                    ))
+    ),
+    
+    # Soil Filter 
+    div(class = "form-group soil-group",
+        strong("Soil Group:"),
+        br(),
+        pickerInput("curves_soilgroup_input", 
+                    label = NULL,
+                    choices = c("All", sort(unique(Yi$soiltext[!is.na(Yi$soiltext)]))),
+                    selected = "All",
+                    multiple = TRUE,
+                    options = list(
+                      `max-options` = 6,
+                      `actions-box` = TRUE,
+                      `selected-text-format` = "count > 2",
+                      `width` = "100%",
+                      `container` = FALSE,
+                      `dropup-auto` = FALSE,
+                      `size` = 6
+                    ))
+    ),
+
+    # Apply button
+    div(style = "margin: 30px 0 15px 0;",
+    actionButton("apply_curves_filters", "Apply Filters", 
+                 style = "width: 100%; background-color: #4d774e; color: white;                               border: none; padding: 10px; border-radius: 4px;                                    font-weight: bold;")
+    ),
+    # Reset button 
+    div(style = "margin-top: 15px;",
+    actionButton("reset_curves_filters", "Reset Filters",
+                 style = "width: 100%; background-color: #3e5c3a; color: white;                               border: none; padding: 8px; border-radius: 4px;")
+    )
+)
+
+# Reset button observer
+observeEvent(input$reset_curves_filters, {
+  updatePickerInput(session, "curves_county_input", selected = "All") 
+  updatePickerInput(session, "curves_prevcrop_input", selected = "All")
+  updatePickerInput(session, "curves_yieldlevel_input", selected = "All")  
+  updatePickerInput(session, "curves_decade_input", selected = "All")
+  updatePickerInput(session, "curves_soilgroup_input", selected = "All")
+})
+```
+
+## Column {data-width="650"}
+
+### Curves graph {data-height="600"}
+
+<div style="height: 100%; overflow-y: auto; padding-right: 10px;">
+```{r, message=FALSE, warning=FALSE}
+
+# ReactiveValues object to store the current filter state
+curves_filter_state <- reactiveValues(
+  county = "All",
+  prevcrop = "All",
+  yieldlevel = "All", 
+  decade = "All",
+  soilgroup = "All",
+  applied = FALSE
+)
+
+# Observer for Apply button 
+observeEvent(input$apply_curves_filters, {
+  curves_filter_state$county <- input$curves_county_input
+  curves_filter_state$prevcrop <- input$curves_prevcrop_input
+  curves_filter_state$yieldlevel <- input$curves_yieldlevel_input
+  curves_filter_state$decade <- input$curves_decade_input
+  curves_filter_state$soilgroup <- input$curves_soilgroup_input
+  curves_filter_state$applied <- TRUE
+})
+
+# Observer for Reset button
+observeEvent(input$reset_curves_filters, {
+  curves_filter_state$county <- "All"
+  curves_filter_state$prevcrop <- "All"
+  curves_filter_state$yieldlevel <- "All"
+  curves_filter_state$decade <- "All"
+  curves_filter_state$soilgroup <- "All"
+  curves_filter_state$applied <- FALSE
+})
+
+# Reactive function that uses the stored filter state
+filteredCurvesData <- reactive({
+  if (!curves_filter_state$applied) {
+    return(data.frame())
+  }
+  
+  data <- Yi
+  cat("Initial Yi data size:", nrow(data), "\n")
+  
+  # Filter by county
+  if (!is.null(curves_filter_state$county) && 
+      length(curves_filter_state$county) > 0 && 
+      !"All" %in% curves_filter_state$county) {
+    data <- data %>% filter(UPPER_TIER_MUNICIPALITY %in% curves_filter_state$county)
+    cat("After county filter:", nrow(data), "for county:", paste(curves_filter_state$county, collapse = ", "), "\n")
+  }
+  
+  # Filter by previous crop
+  if (!is.null(curves_filter_state$prevcrop) && 
+      length(curves_filter_state$prevcrop) > 0 && 
+      !"All" %in% curves_filter_state$prevcrop) {
+    data <- data %>% filter(prevcrop_group %in% curves_filter_state$prevcrop)
+    cat("After prevcrop filter:", nrow(data), "for:", paste(curves_filter_state$prevcrop, collapse = ", "), "\n")
+  }
+
+  # Filter by yield level
+  if (!is.null(curves_filter_state$yieldlevel) && 
+      length(curves_filter_state$yieldlevel) > 0 && 
+      !"All" %in% curves_filter_state$yieldlevel) {
+    data <- data %>% filter(yieldlevel %in% curves_filter_state$yieldlevel)
+    cat("After yield level filter:", nrow(data), "for:", paste(curves_filter_state$yieldlevel, collapse = ", "), "\n")
+  }
+
+  # Filter by decade
+  if (!is.null(curves_filter_state$decade) && 
+      length(curves_filter_state$decade) > 0 && 
+      !"All" %in% curves_filter_state$decade) {
+    data <- data %>% filter(decade %in% curves_filter_state$decade)
+    cat("After decade filter:", nrow(data), "for:", paste(curves_filter_state$decade, collapse = ", "), "\n")
+  }
+
+  # Filter by soil group
+  if (!is.null(curves_filter_state$soilgroup) && 
+      length(curves_filter_state$soilgroup) > 0 && 
+      !"All" %in% curves_filter_state$soilgroup) {
+    data <- data %>% filter(soiltext %in% curves_filter_state$soilgroup)
+    cat("After soil group filter:", nrow(data), "for:", paste(curves_filter_state$soilgroup, collapse = ", "), "\n")
+  }
+
+  # Final cleanup - remove any remaining NA values
+ # data <- data %>%
+#    filter(!is.na(yieldlevel), !is.na(Yi_bu), !is.na(Xi_lbs), !is.na(curve_id), !is.na(prevcrop_group), !is.na(soiltext))
+
+  #cat("Final filtered curves data size:", nrow(data), "\n")
+  #cat("Unique curves in filtered data:", length(unique(data$curve_id)), "\n")
+  #cat("Unique soil types in filtered data:", paste(unique(data$soiltext), collapse = ", "), "\n")
+  
+  return(data)
+})
+
+# Function to calculate optimal plot height for curves
+calculate_curves_plot_height <- function(n_facets, min_height = 600, max_height = 1200, height_per_row = 300) {
+  # Calculate number of rows 
+  n_rows <- ceiling(n_facets / 3)
+  
+  # Calculate Height: Base height + Height per additional row
+  calculated_height <- min_height + (n_rows - 1) * height_per_row
+  
+  # Check if its within the bounds
+  final_height <- max(min_height, min(calculated_height, max_height))
+  
+  return(final_height)
+}
+
+# Plot for Curves
+output$curvesPlot <- renderPlot({
+  filtered_data <- filteredCurvesData()
+  
+  if (!curves_filter_state$applied) {
+    # Initial message
+    plot_text <- paste("Please select your filters and click 'Apply Filters' to view the nitrogen response curves.",
+                       "\n\nThis interactive plot shows corn yield response curves using the quadratic-plateau model",
+                       "across different management conditions and soil types.")
+    
+    ggplot() +
+      annotate("text", x = 0.5, y = 0.5, label = plot_text, 
+               size = 5, hjust = 0.5, vjust = 0.5, color = "gray50") +
+      theme_void() +
+      theme(plot.background = element_rect(fill = "white", color = NA))
+    
+  } else if (nrow(filtered_data) == 0) {
+    # No data message
+    plot_text <- paste("No data matches the selected filters combination.",
+                       "\n\nPlease try different filter settings or reset filters to start over.")
+    
+    ggplot() +
+      annotate("text", x = 0.5, y = 0.5, label = plot_text,
+               size = 5, hjust = 0.5, vjust = 0.5, color = "gray50") +
+      theme_void() +
+      theme(plot.background = element_rect(fill = "white", color = NA)) 
+    
+  } else {
+    # Create the plot using the new Yi data approach with yield level linetypes
+    # First, ensure each curve has consistent aesthetics by grouping properly
+    plot_data <- filtered_data %>%
+      group_by(curve_id) %>%
+      # Take the first value of each aesthetic variable per curve to ensure consistency
+      mutate(
+        curve_prevcrop = first(prevcrop_group),
+        curve_yieldlevel = first(yieldlevel)
+      ) %>%
+      ungroup()
+    
+    p <- plot_data %>%
+      ggplot(aes(x = Xi_lbs, y = Yi_bu, 
+                 color = curve_prevcrop, 
+                 linetype = curve_yieldlevel)) +  
+      
+      # Lines for each curve with different linetypes for yield levels
+      geom_path(aes(group = curve_id),
+                linewidth = 0.3,  
+                alpha = 0.8) +
+      
+      # Colors for previous crop groups
+      scale_color_manual(
+        name = "Previous Crop",
+        values = c("corn" = "#F4A460", "legumes" = "#228B22",
+                   "small_cereals" = "#DAA520",
+                   "NA" = "#808080")) +
+      
+      # Linetypes for yield levels
+      scale_linetype_manual(
+        name = "Yield Level",
+        values = c("High" = "solid", 
+                   "Medium" = "dashed", 
+                   "Low" = "longdash"),
+        breaks = c("High", "Medium", "Low")) +
+      
+      # Facet by soil type
+      facet_wrap(~soiltext,
+                 labeller = as_labeller(function(x) str_to_title(str_replace_all(x, "_", " "))),
+                 ncol = 3,
+                 scales = "free_y") +
+      
+      scale_y_continuous(
+        name = "Yield (bu/ac)",
+        breaks = seq(0, 350, by = 50),
+        limits = c(0, 350),
+        labels = scales::label_number(),
+        expand = expansion(mult = c(0.02, 0.02))
+      ) +
+      
+      scale_x_continuous(
+        name = "N Rate (lbs N/ac)",
+        breaks = seq(0, 300, by = 50),
+        limits = c(0, 300),
+        labels = scales::label_number(),
+        expand = expansion(mult = c(0.02, 0.02))
+      ) +
+      
+      theme_minimal(base_size = 12) +
+      theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "white", color = "gray70", size = 0.3),
+        panel.border = element_rect(fill = NA, color = "gray70", size = 0.5),
+        strip.background = element_rect(fill = "#f5f5f5", color = "gray70", size = 0.3),
+        strip.text = element_text(size = 11, face = "bold", color = "gray20", margin = margin(4,4,4,4)),
+        axis.title = element_text(size = 13, face = "bold", color = "gray20"),
+        axis.text = element_text(size = 10, color = "gray40"),
+        axis.line = element_line(color = "gray50", size = 0.3),
+        axis.ticks = element_line(color = "gray50", size = 0.3),
+        
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "horizontal",
+        legend.box.just = "center",
+        legend.justification = "center",
+        
+        legend.margin = margin(t = 15, r = 5, b = 5, l = 5),
+        legend.spacing.x = unit(1.5, "cm"),  
+        legend.box.spacing = unit(0.8, "cm"),
+        
+        legend.title = element_text(size = 12, face = "bold", color = "gray20"),
+        legend.text = element_text(size = 10, color = "gray40"),
+        legend.background = element_rect(fill = "white", color = "gray80", size = 0.3),
+        legend.key.size = unit(0.4, "cm"),
+        legend.key.height = unit(0.3, "cm"),  
+        legend.key.width = unit(0.8, "cm"),
+        legend.key.spacing.x = unit(0.3, "cm"),
+        
+        plot.background = element_rect(fill = "white", color = NA),
+        plot.margin = margin(10, 15, 5, 10),
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        
+        panel.spacing = unit(0.8, "lines")
+      ) +
+      
+      # Legends for Previous Crop and Yieldlevel
+      guides(
+        color = guide_legend(
+          title = "Previous Crop",
+          nrow = 1,
+          override.aes = list(linewidth = 1.2, alpha = 1),
+          title.position = "top",
+          order = 1
+        ),
+        linetype = guide_legend(
+          title = "Yield Level",
+          nrow = 1,
+          override.aes = list(linewidth = 1.2, alpha = 1, color = "black"),
+          title.position = "top",
+          order = 2
+        )
+      )
+    
+    return(p)
+  }
+})
+
+# Plot wrapper with dynamic height for curves:
+output$curvesPlotWrapper <- renderUI({
+  filtered_data <- filteredCurvesData()
+  
+  # Calculate dynamic height based on number of unique soil types
+  if (nrow(filtered_data) > 0) {
+    n_soil_types <- length(unique(filtered_data$soiltext))
+    plot_height <- calculate_curves_plot_height(n_soil_types)
+  } else {
+    plot_height <- 400  # Default height 
+  }
+  
+  div(
+    class = "curves-plot-container",
+    style = paste0("height: ", plot_height + 100, "px; overflow-y: auto; overflow-x: hidden; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #fafafa;"),
+    plotOutput("curvesPlot", height = paste0(plot_height, "px"), width = "100%")
+  )
+})
+
+uiOutput("curvesPlotWrapper")
+```
+</div>
+
+
+
+# MERN+ {data-orientation="columns"}
+
+```{r, include=FALSE}
+
+# Read data for MERN+ tab 
+final_mern_data <- read_excel("data/qp_clean.xlsx")
+
+# Clean and convert data types for all variables
+final_mern_data <- final_mern_data %>%
+  mutate(
+    # Convert all variables to numeric datatypes
+    aonr = as.numeric(as.character(aonr)),
+    nae = as.numeric(as.character(nae)),
+    MERN_lbs = as.numeric(as.character(MERN_lbs)),
+    YMERN_bu = as.numeric(as.character(YMERN_bu)),
+    delta_bu = as.numeric(as.character(delta_bu)),
+    
+    # Clean AONR values - Remove extreme outliers and zeros
+    aonr = case_when(
+      is.infinite(aonr) ~ NA_real_,
+      aonr <= 0 ~ NA_real_,        # Remove zero and negative values
+      aonr > 500 ~ NA_real_,       # Remove unrealistic high values (>500 lbs N/ac)
+      TRUE ~ aonr
+    ),
+    
+    nae = case_when(
+      is.infinite(nae) ~ NA_real_,
+      nae > 1000 ~ NA_real_,  # Remove unrealistic high values
+      nae < -100 ~ NA_real_,  # Remove unrealistic low values
+      TRUE ~ nae
+    )
+  )
+```
+
+## Column {data-width="150"}
+
+### Filters
+
+```{r}
+
+
+div(class = "filters-column",
+    
+    # Plot Selection
+    div(class = "form-group",
+        strong("Select Variables (max 2):"),
+        br(),
+        pickerInput("mern_variables_input", 
+                    label = NULL,
+                    choices = list(
+                      "AONR (lbs N/ac)" = "aonr",
+                      "MERN (lbs N/ac)" = "MERN_lbs",
+                      "YMERN (bu/ac)" = "YMERN_bu",
+                      "Yield Response (bu/ac)" = "delta_bu",
+                      "NAE (bu/lb N)" = "nae"),
+                    
+                    selected = c("YMERN_bu", "delta_bu"),
+                    multiple = TRUE,
+                    options = list(
+                      `max-options` = 2,
+                      `actions-box` = TRUE,
+                      `selected-text-format` = "count > 1",
+                      `width` = "100%",
+                      `container` = FALSE,
+                      `dropup-auto` = FALSE,
+                      `size` = 5  
+                    ))
+    ),
+    
+    # Soil Type Selection
+    div(class = "form-group",
+        strong("Select Soil Types (max 3):"),
+        br(),
+        pickerInput("mern_soiltext_input", 
+                    label = NULL,
+                    choices = sort(unique(final_mern_data$soiltext[!is.na(final_mern_data$soiltext)])),
+                    selected = c("clay_loam", "loam", "sandy_loam"),
+                    multiple = TRUE,
+                    options = list(
+                      `max-options` = 3,
+                      `actions-box` = TRUE,
+                      `selected-text-format` = "count > 2",
+                      `width` = "100%",
+                      `container` = FALSE,
+                      `dropup-auto` = FALSE,
+                      `size` = 5
+                    ))
+    ),
+    
+    # County Filter
+    div(class = "form-group",
+        strong("County:"),
+        br(),
+        pickerInput("mern_plus_county_input", 
+                    label = NULL,
+                    choices = c("All", sort(unique(final_mern_data$UPPER_TIER_MUNICIPALITY[!is.na(final_mern_data$UPPER_TIER_MUNICIPALITY)]))),
+                    selected = "All",
+                    multiple = TRUE,
+                    options = list(
+                      `max-options` = 3,
+                      `actions-box` = TRUE,
+                      `selected-text-format` = "count > 2",
+                      `width` = "100%",
+                      `container` = FALSE,
+                      `dropup-auto` = FALSE,
+                      `size` = 5
+                    ))
+    ),
+    
+    # Decade Filter
+    div(class = "form-group",
+        strong("Decade:"),
+        br(),
+        pickerInput("mern_plus_decade_input",
+                    label = NULL,
+                    choices = c("All", "1960s", "1970s", "1980s", "1990s",
+                                "2000s", "2010+"),
+                    selected = "All",
+                    multiple = TRUE,
+                    options = list(
+                      `max-options` = 6,
+                      `actions-box` = TRUE,
+                      `selected-text-format` = "count > 2",
+                      `width` = "100%",
+                      `container` = FALSE,
+                      `dropup-auto` = FALSE,
+                      `size` = 5
+                    ))
+    ),
+    
+    # Apply button
+    div(style = "margin: 30px 0 15px 0;",
+        actionButton("apply_mern_plus_filters", "Apply Filters", 
+                     style = "width: 100%; background-color: #4d774e;
+                     color:white; 
+                     border: none; padding: 10px; border-radius: 4px; 
+                     font-weight: bold;")
+    ),
+    
+    # Reset button
+    div(style = "margin-top: 15px;",
+        actionButton("reset_mern_plus_filters", "Reset Filters",
+                     style = "width: 100%; background-color: #3e5c3a; 
+                     color: white; 
+                     border: none; padding: 8px; border-radius: 4px;")
+    )
+)
+
+# Reset button observer
+observeEvent(input$reset_mern_plus_filters, {
+  updatePickerInput(session, "mern_variables_input", selected = c("YMERN_bu",
+                                                                  "delta_bu"))
+  updatePickerInput(session, "mern_soiltext_input", selected = c("clay_loam",
+                                                                 "loam",
+                                                                 "sandy_loam"))
+  updatePickerInput(session, "mern_plus_county_input", selected = "All")
+  updatePickerInput(session, "mern_plus_decade_input", selected = "All")
+})
+```
+
+## Column {data-width="650"}
+
+### MERN {data-height="600"}
+
+<div style="height: 100%; overflow-y: auto; padding-right: 10px;">
+```{r, message=FALSE, warning=FALSE}
+
+# Reactive values for filter state
+mern_plus_filter_state <- reactiveValues(
+  variables = c("YMERN_bu", "delta_bu"),
+  soiltext = c("clay_loam", "loam", "sandy_loam"),
+  county = "All",
+  decade = "All",
+  applied = FALSE
+)
+
+# Observer for Apply button
+observeEvent(input$apply_mern_plus_filters, {
+  mern_plus_filter_state$variables <- input$mern_variables_input
+  mern_plus_filter_state$soiltext <- input$mern_soiltext_input
+  mern_plus_filter_state$county <- input$mern_plus_county_input
+  mern_plus_filter_state$decade <- input$mern_plus_decade_input
+  mern_plus_filter_state$applied <- TRUE
+})
+
+# Observer for Reset button
+observeEvent(input$reset_mern_plus_filters, {
+  mern_plus_filter_state$variables <- c("YMERN_bu", "delta_bu")
+  mern_plus_filter_state$soiltext <- c("clay_loam", "loam", "sandy_loam")
+  mern_plus_filter_state$county <- "All"
+  mern_plus_filter_state$decade <- "All"
+  mern_plus_filter_state$applied <- FALSE
+})
+
+# Reactive function for filtered data
+filteredMERNPlusData <- reactive({
+  if (!mern_plus_filter_state$applied) {
+    return(data.frame())
+  }
+  
+  data <- final_mern_data
+  
+  # Filter by county
+  if (!is.null(mern_plus_filter_state$county) && 
+      length(mern_plus_filter_state$county) > 0 && 
+      !"All" %in% mern_plus_filter_state$county) {
+    data <- data %>% filter(UPPER_TIER_MUNICIPALITY %in% mern_plus_filter_state$county)
+  }
+  
+  # Filter by decade
+  if (!is.null(mern_plus_filter_state$decade) && 
+      length(mern_plus_filter_state$decade) > 0 && 
+      !"All" %in% mern_plus_filter_state$decade) {
+    data <- data %>% filter(decade %in% mern_plus_filter_state$decade)
+  }
+  
+  # Filter by selected soil types
+  if (!is.null(mern_plus_filter_state$soiltext) && 
+      length(mern_plus_filter_state$soiltext) > 0) {
+    data <- data %>% filter(soiltext %in% mern_plus_filter_state$soiltext)
+  }
+  
+  return(data)
+})
+
+# Function to create variable labels
+get_variable_label <- function(var_name) {
+  labels <- list(
+    "YMERN_bu" = "YMERN (bu/ac)",
+    "delta_bu" = "Yield Response (bu/ac)",
+    "MERN_lbs" = "MERN (lbs N/ac)", 
+    "aonr" = "AONR (lbs N/ac)",
+    "nae" = "NAE (bu/lb N)" 
+  )
+  return(labels[[var_name]] %||% var_name)
+}
+
+# Plot output
+output$mernPlusPlot <- renderPlot({
+  filtered_data <- filteredMERNPlusData()
+  
+  if (!mern_plus_filter_state$applied) {
+    # Initial message
+    plot_text <- paste("Please select your filters and click 'Apply Filters' to view the MERN boxplots.",
+                       "\n\nThis plot shows distributions of nitrogen fertilizer metrics",
+                       "across yield levels and management conditions.")
+    
+    ggplot() +
+      annotate("text", x = 0.5, y = 0.5, label = plot_text, 
+               size = 5, hjust = 0.5, vjust = 0.5, color = "gray50") +
+      theme_void() +
+      theme(plot.background = element_rect(fill = "white", color = NA))
+    
+  } else if (nrow(filtered_data) == 0) {
+    # No data message
+    plot_text <- paste("No data matches the selected filter combination.",
+                       "\n\nPlease try different filter settings or reset filters to start over.")
+    
+    ggplot() +
+      annotate("text", x = 0.5, y = 0.5, label = plot_text,
+               size = 5, hjust = 0.5, vjust = 0.5, color = "gray50") +
+      theme_void() +
+      theme(plot.background = element_rect(fill = "white", color = NA))
+    
+  } else {
+    # Prepare data for plotting
+    selected_vars <- mern_plus_filter_state$variables
+    selected_soils <- mern_plus_filter_state$soiltext
+    
+    # Reshape data for plotting
+    plot_data <- filtered_data %>%
+      filter(soiltext %in% selected_soils) %>%
+      select(yieldlevel, prevcrop_group, soiltext, all_of(selected_vars)) %>%
+      pivot_longer(cols = all_of(selected_vars), 
+                   names_to = "variable", 
+                   values_to = "value") %>%
+      filter(!is.na(value), !is.na(yieldlevel), is.finite(value)) %>%
+      mutate(
+        variable_label = map_chr(variable, get_variable_label),
+        variable_factor = factor(variable_label, levels = map_chr(selected_vars, get_variable_label)),
+        soiltext_label = str_to_title(str_replace_all(soiltext, "_", " ")),
+        yieldlevel = factor(yieldlevel, levels = c("High", "Medium", "Low"))
+      )
+    
+    if (nrow(plot_data) == 0) {
+      ggplot() +
+        annotate("text", x = 0.5, y = 0.5, label = "No valid data for plotting",
+                 size = 5, hjust = 0.5, vjust = 0.5, color = "gray50") +
+        theme_void()
+    } else {
+              p <- plot_data %>%
+                  ggplot(aes(x = yieldlevel, y = value, fill = prevcrop_group)) +
+  
+                  # Main boxplot
+                  geom_boxplot(position = position_dodge(width = 0.8), 
+                  alpha = 0.7, outlier.shape = NA,
+                  width = 0.6) +
+  
+                  # Show points
+                  geom_jitter(aes(color = prevcrop_group), 
+                              position = position_jitterdodge(dodge.width = 0.8,                               jitter.width = 0.2),
+                              size = 1.2, alpha = 0.6, stroke = 0.3) +
+                
+                  geom_beeswarm(aes(color = prevcrop_group), 
+                              dodge.width = 0.8, cex = 1.2, size = 1, 
+                              alpha = 0.6) +
+        
+        scale_fill_manual(
+                          name = "Previous Crop",
+                          values = c("corn" = "#F4A460", "legumes" = "#228B22",
+             "small_cereals" = "#DAA520","NA" = "#808080")) +
+  
+        # Match colors for points to fill colors
+        scale_color_manual(
+          name = "Previous Crop",
+          values = c("corn" = "#F4A460", "legumes" = "#228B22", 
+                     "small_cereals" = "#DAA520", "other" = "#808080"),
+                      na.value = "#808080",
+                      guide = "none") +
+        
+        facet_grid(variable_factor ~ soiltext_label, 
+                   scales = "free_y",  
+                   labeller = labeller(soiltext_label = label_value,
+                                     variable_factor = label_value),
+                   switch = "y",
+                   as.table = TRUE) +
+        
+        labs(
+          x = "Yield Level",
+          y = ""
+        ) +
+        
+        theme_minimal(base_size = 12) +
+        theme(
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect(fill = "white", color = "gray70", 
+                                          size = 0.3),
+          panel.border = element_rect(fill = NA, color = "gray70", size = 0.5),
+          
+          # Strip styling for better variable separation
+          strip.background.x = element_rect(fill = "#e8f4e8", color = "gray70",
+                                            size = 0.5),
+          strip.background.y = element_rect(fill = "#4d774e", color = "white",
+                                            size = 0.8),
+          strip.text.x = element_text(size = 11, face = "bold", color = "gray20",
+                                    margin = margin(4,4,4,4)),
+          strip.text.y = element_text(size = 12, face = "bold", color = "white", 
+                                    margin = margin(8,8,8,8)),
+          strip.placement = "outside",
+          
+          # Panel spacing for better separation
+          panel.spacing.x = unit(0.8, "lines"),
+          panel.spacing.y = unit(1.2, "lines"),
+          
+          axis.title = element_text(size = 13, face = "bold", color = "gray20"),
+          axis.text = element_text(size = 10, color = "gray40"),
+          axis.text.x = element_text(angle = 0, hjust = 1),
+          
+          # Force x-axis labels to appear on ALL panels including top row
+          axis.text.x.top = element_text(size = 10, color = "gray40", angle = 0,
+                                         hjust = 1),
+          strip.switch.pad.grid = unit(0.1, "cm"),
+          axis.title.x = element_text(margin = margin(t = 10)),
+          
+          legend.position = "bottom",
+          legend.title = element_text(size = 12, face = "bold", color ="gray20"),
+          legend.text = element_text(size = 10, color = "gray40"),
+          legend.background = element_rect(fill = "white", color = "gray80", 
+                                           size= 0.3),
+          
+          plot.background = element_rect(fill = "white", color = NA),
+          plot.margin = margin(10, 15, 10, 10),
+          plot.title = element_text(size = 14, face = "bold", hjust = 0.5,
+                                    margin= margin(b = 20))) +
+          coord_cartesian(expand = TRUE, clip = "off") +
+          guides(x = guide_axis(check.overlap = FALSE))
+      
+      return(p)
+    }
+  }
+})
+
+# Dynamic height calculation
+calculate_mern_plot_height <- function(n_variables, n_soils, base_height = 400) {
+  height_per_row <- 300
+  total_height <- base_height + (n_variables - 1) * height_per_row
+  return(min(max(total_height, base_height), 1200))
+}
+
+# Plot wrapper with dynamic height
+output$mernPlusPlotWrapper <- renderUI({
+  if (mern_plus_filter_state$applied) {
+    n_vars <- length(mern_plus_filter_state$variables)
+    n_soils <- length(mern_plus_filter_state$soiltext)
+    plot_height <- calculate_mern_plot_height(n_vars, n_soils)
+  } else {
+    plot_height <- 400
+  }
+  
+  div(
+    style = paste0("height: ", plot_height + 100, "px; overflow-y: auto; padding: 10px;"),
+    plotOutput("mernPlusPlot", height = paste0(plot_height, "px"), width = "100%")
+  )
+})
+
+uiOutput("mernPlusPlotWrapper")
+```
+</div>
+
+
+# About {data-orientation="columns"}
+
+## Column {data-width="700"}
+
+### About NCorn Dashboard
+
+<div style="text-align: center; margin-bottom: 30px;">
+  <a href="https://www.uoguelph.ca/" style="display: inline-block; margin-right: 20px;">
+    <img src="images/uog.png" height="80" width="400" style="max-width: 100%;"/>
+  </a>
+  <a href="https://www.omafa.gov.on.ca/" style="display: inline-block; margin-left: 20px;">
+    <img src="images/OMAFA.png" height="120" width="300" style="max-width: 100%;"/>
+  </a>
+  <a href="https://gfo.ca/research-projects/c2024ag12/" style="display: inline-block; margin-left: 20px;">
+    <img src="images/gfo-new.png" height="120" width="120" style="max-width: 100%;"/>
+  </a>
+</div>
+
+
+<div style="margin-top: 40px;">
+#### Project Background
+
+This dashboard was developed as part of the research project **"Validation of Ontario N rate recommendations in relation to increased yield and 4R practices in corn"**, funded by the Ontario Agri-Food Research Initiative (OAFRI) - Applied Research Program.
+
+**Project Specifications:**
+
+<table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+<tr style="background-color: #f7f5ed;">
+  <td style="padding: 8px; border: 1px solid #000; font-weight: bold; width: 35%;">OAFRI Project Number</td>
+  <td style="padding: 8px; border: 1px solid #000;">OAF-2023-102580</td>
+</tr>
+<tr style="background-color:  #f7f5ed;">
+  <td style="padding: 8px; border: 1px solid #000; font-weight: bold;">GFO Reference Number</td> 
+  <td style="padding: 8px; border: 1px solid #000;">C2024AG12</td>
+</tr>
+<tr style="background-color:  #f7f5ed;">
+  <td style="padding: 8px; border: 1px solid #000; font-weight: bold;">Project Timeline</td> 
+  <td style="padding: 8px; border: 1px solid #000;">April 2024 – March 2026</td>
+</tr>
+<tr style="background-color:  #f7f5ed;">
+  <td style="padding: 8px; border: 1px solid #000; font-weight: bold;">Principal Investigator</td>
+  <td style="padding: 8px; border: 1px solid #000;">Dr. Adrian Correndo, University of Guelph</td> 
+</tr>
+</table>
+
+<div style="margin-top: 15px;">
+<strong>Additional Resources:</strong> <a href="https://gfo.ca/research-projects/c2024ag12/" style="color: #4d774e; text-decoration: none; font-weight: 500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">GFO Project Summary →</a>
+</div>
+
+</div>
+
+
+<div style="margin-top: 40px;">
+#### Application Overview
+
+The NCorn Dashboard is a professional-grade interactive web application designed to visualize and analyze nitrogen fertilizer response data for corn production across Ontario, Canada. This tool provides researchers, agronomists, and farmers with comprehensive insights into optimal nitrogen management strategies based on extensive field trial data spanning multiple decades.
+
+</div>
+
+
+<div style="margin-top: 40px;">
+#### Dashboard Features
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin: 20px 0;">
+
+<div style="background-color: #f7f5ed; border: 2px solid #000; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-height: 180px; display: flex; flex-direction: column;">
+<div style="display: flex; align-items: center; margin-bottom: 16px;">
+<div style="background-color: #4d774e; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 18px;">
+<i class="fas fa-map-marked-alt"></i>
+</div>
+<strong style="color: #4d774e; font-size: 1.2em; font-weight: 600;">Trial Locations</strong>
+</div>
+<p style="margin: 0; font-size: 0.95em; color: #555; line-height: 1.5; flex-grow: 1;">Explore corn nitrogen trials across Ontario counties with interactive mapping. Filter by location, year, soil type, and previous crop to identify relevant field studies in your region.</p>
+<div style="margin-top: 12px; font-size: 0.85em; color: #4d774e; font-weight: 500;">
+Interactive Map • Real-time Filtering • Data Summary
+</div>
+<p style="margin-top: 8px; font-size: 0.8em; color: #888; line-height: 1.4;">
+Note: Trial locations shown on the dashboard are <em>not actual field sites</em>. They have been anonymized by using county centroids with additional random jitter to protect privacy.
+</p>
+</div>
+
+<div style="background-color: #f7f5ed; border: 2px solid #000; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-height: 180px; display: flex; flex-direction: column;"> 
+<div style="display: flex; align-items: center; margin-bottom: 16px;">
+<div style="background-color: #4d774e; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 16px; line-height: 1;">
+<i class="fas fa-chart-line"></i>
+</div>
+<strong style="color: #4d774e; font-size: 1.2em; font-weight: 600;">Response Curves</strong>
+</div>
+<p style="margin: 0; font-size: 0.95em; color: #555; line-height: 1.5; flex-grow: 1;">Visualize corn yield response to nitrogen rates using quadratic-plateau models. Compare responses across different soil types, yield levels, and previous crop rotations.</p>
+<div style="margin-top: 12px; font-size: 0.85em; color: #4d774e; font-weight: 500;">
+Yield Curves • Multi-factor Analysis • Model Visualization
+</div>
+</div>
+
+<div style="background-color: #f7f5ed; border: 2px solid #000; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-height: 180px; display: flex; flex-direction: column;">
+<div style="display: flex; align-items: center; margin-bottom: 16px;">
+<div style="background-color: #4d774e; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 18px;">
+<i class="fas fa-dollar-sign"></i>
+</div>
+<strong style="color: #4d774e; font-size: 1.2em; font-weight: 600;">Economic Analysis</strong>
+</div>
+<p style="margin: 0; font-size: 0.95em; color: #555; line-height: 1.5; flex-grow: 1;">Analyze economic nitrogen rates (MERN) and efficiency metrics across management conditions. Compare yield responses and nitrogen use efficiency distributions.</p>
+<div style="margin-top: 12px; font-size: 0.85em; color: #4d774e; font-weight: 500;">
+Economic Rates • Efficiency Metrics • Statistical Distributions
+</div>
+</div>
+
+</div>
+</div>
+
+
+
+<div style="margin-top: 40px;">
+#### Key Performance Indicators
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+
+<div style="text-align: center; padding: 10px; background-color: #f7f5ed;  border: 2px solid #000;">
+<div style="font-size: 1.2em; font-weight: bold; color: #4d774e;">AONR</div>
+<div style="font-size: 0.9em; color: #666;">Agronomic Optimum N Rate</div>
+</div>
+
+<div style="text-align: center; padding: 10px; background-color: #f7f5ed;  border: 2px solid #000;">  
+<div style="font-size: 1.2em; font-weight: bold; color: #4d774e;">MERN</div>
+<div style="font-size: 0.9em; color: #666;">Maximum Economic Rate of Nitrogen</div>
+</div>
+
+<div style="text-align: center; padding: 10px; background-color:#f7f5ed;  border: 2px solid #000;">  
+<div style="font-size: 1.2em; font-weight: bold; color: #4d774e;">NAE</div>
+<div style="font-size: 0.9em; color: #666;">Nitrogen Agronomic Efficiency</div>
+</div>
+
+<div style="text-align: center; padding: 10px; background-color: #f7f5ed;  border: 2px solid #000;">  
+<div style="font-size: 1.2em; font-weight: bold; color: #4d774e;">ΔYield</div>
+<div style="font-size: 0.9em; color: #666;">Fertilizer Yield Response</div>
+</div>
+
+</div>
+</div>
+
+
+<div style="margin-top: 40px;">
+#### Development & Maintenance
+
+This dashboard was developed by Atharva Vichare and supervised by Dr.Adrian Correndo 
+</div>
+
+
+<div style="margin-top: 40px;">
+#### Citation & Research Integration
+
+This application is built upon peer-reviewed research published in *Field Crops Research* and incorporates methodologies validated through the Ontario agricultural research network. When utilizing this tool or referencing underlying research, please cite the original publication and acknowledge OAFRI funding support.
+
+**Funding Acknowledgment:** Ontario Agri-Food Research Initiative (OAFRI) - Applied Research Program
+</div>
+
+
+<div style="margin-top: 40px;">
+#### Usage Guidelines & Limitations
+
+This dashboard serves research and educational purposes. Nitrogen fertilizer recommendations require consideration of local soil conditions, current economic factors, environmental regulations, and seasonal variability. Users should consult certified crop advisors and local agricultural extension services for site-specific management decisions.
+
+</div>
+<hr style="margin: 40px 0; border: none; border-top: 2px solid #e9ecef;">
+
+<div style="text-align: center; color: #6c757d; font-size: 0.9em;">
+<strong>NCorn Dashboard v1.0</strong> | Last Updated: August 2025 | 
+<a href="mailto:acorren@uoguelph.ca" style="color: #4d774e; text-decoration: none;">Contact Support</a>
+</div>
+
+</div>
