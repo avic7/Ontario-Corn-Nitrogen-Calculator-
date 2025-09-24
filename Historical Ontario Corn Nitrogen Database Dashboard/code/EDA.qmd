@@ -1,0 +1,386 @@
+---
+title: "EDA NCorn"
+author: "Atharva"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+#data_00 <- data_00 %>%
+#  mutate(trial_id = as.character(trial_id))
+
+#data_00 <- NCorn_private %>% 
+#  mutate(trial_id = as.character(trial_id)) %>%
+#  group_by(trial_id) %>% 
+#  slice_head(n = 1) %>% 
+#  dplyr::select(trial_id, sample_lat, sample_lon, UPPER_TIER_MUNICIPALITY) %>%
+#  ungroup() %>% 
+#  right_join(data_00, by = "trial_id")
+```
+
+
+## 1.Libraries
+```{r warning=FALSE, message=FALSE}
+library(pacman)
+
+# Data wrangling
+p_load(readxl, dplyr, tidyr, stringr, lubridate, scales, purrr)
+# Plots
+p_load(ggplot2, ggrepel, ggthemes, ggpubr, ggExtra, gganimate, ggsci, ggbeeswarm, ggforce, ggtext, ggridges, patchwork, hrbrthemes, viridis, viridisLite, viridisdata, RColorBrewer, ggpmisc,gridExtra,grid,cowplot, forcats)
+# Maps
+p_load(leaflet, maps, sf, geojsonio, rnaturalearth)
+# Soiltestcorr for quadratic_plateau models 
+p_load(soiltestcorr)
+# mgcv for gam models
+p_load(mgcv)
+
+# SHiny
+#p_load(flexdashboard, plotly, shiny, shinyWidgets) 
+
+```
+
+## 2.Colors
+```{r}
+
+amelie_palette <- c("#ffe5ec", "#ffc2d1", "#ffb3c6", "#ff8fab", "#fb6f92")
+amelie_palette2 <- c("#ffd6ff", "#e7c6ff", "#c8b6ff", "#b8c0ff", "#bbd0ff")
+sofia_palette <- c("#9b2226", "#ca6702", "#ee9b00", "#94d2bd", "#005f73")
+```
+
+
+## 3.Natural Language Processing 
+```{r}
+# Not it
+`%notin%` <- Negate(`%in%`)
+# Clean values function 
+clean_values <- function(x) {
+  x %>%
+    stringr::str_trim() %>%                    # remove leading/trailing whitespace
+    stringr::str_to_lower() %>%                # lowercase
+    stringr::str_replace_all("[^a-z0-9]+", "_") %>%  # replace non-alphanumerics with _
+    stringr::str_replace_all("^_|_$", "")      # remove leading/trailing underscores
+}
+
+```
+
+
+## 4. Data
+```{r warning=FALSE, message=FALSE}
+
+# Step 1: Load and preprocess data
+data_00 <- read_excel("data/N_corn_08042025.xlsx") %>% 
+  arrange(trial_id) %>%  
+  group_by(trial_id) %>%
+  ungroup() %>% 
+  mutate(year = as.numeric(year)) %>% # Ensure year is numeric
+  mutate(
+    # Assign decades based on year
+    decade = case_when(
+      between(year, 1960, 1969) ~ "1960s",
+      between(year, 1970, 1979) ~ "1970s",
+      between(year, 1980, 1989) ~ "1980s",
+      between(year, 1990, 1999) ~ "1990s",
+      between(year, 2000, 2009) ~ "2000s",
+      between(year, 2010, 2029) ~ "2010+",
+      #between(year, 2020, 2029) ~ "2020s",
+      TRUE ~ "NA"
+    ) ) %>%
+  # Summarize by group of interest
+  # Express all as means
+  group_by(decade, year, UPPER_TIER_MUNICIPALITY, trial_id, tillage, prevcrop,
+           soilseries, soiltext, genotype_name,
+           n_rate, curve_indicator, curve_group, rep_id) %>%
+  summarize(
+    yield = mean(yield, na.rm = TRUE),
+    lat = mean(sample_lat, na.rm = TRUE),
+    lon = mean(sample_lon, na.rm = TRUE)
+  ) %>%
+  ungroup() 
+
+# Filter and calculate key metrics
+data_01 <- data_00 %>%
+  # group at the curve level
+  group_by(trial_id, curve_group) %>%
+  mutate(
+    ymax = max(yield, na.rm = TRUE),
+    ymin = yield[which.min(n_rate)],
+    delta = ymax - ymin,
+    n_resp = yield - ymin,
+    nae = n_resp / n_rate,
+    maxrate = max(n_rate, na.rm = TRUE),
+    minrate = min(n_rate, na.rm = TRUE),
+    rates_no = n_distinct(n_rate)
+  ) %>%
+  ungroup() %>%
+  filter(rates_no >= 4 & maxrate >= 140) # select trials with 4 rates and max rate 140
+
+# Add Yield Level classes
+data_02 <- data_01 %>% 
+   mutate(
+  ymax_buac = ymax * 0.0159,   
+    # Fixed yield level thresholds 
+    yieldlevel = case_when(
+      is.na(ymax_buac) ~ NA_character_,    # Handle NAs explicitly
+      ymax_buac >= 200 ~ "High",           # High yield
+      ymax_buac >= 150 & ymax_buac < 200 ~ "Medium",      # Medium yield 
+      ymax_buac < 150 ~ "Low",             # Low yield
+      TRUE ~ "Check"                       # This should catch any edge cases
+    )
+  ) %>%
+  mutate(
+  # Convert yield to bu/ac
+    yield_buac = yield * 0.01593,
+    ymin_buac = ymin * 0.01593,
+    delta_buac = delta * 0.01593
+  ) %>%
+   mutate(yieldlevel = 
+           factor(yieldlevel, 
+                  levels = c("High", "Medium", "Low")) ) %>% 
+      # Clean trial numbering
+    # trial = dense_rank(trial_id) 
+  ungroup() %>%
+  # Step 5: Assign curve_id and curve_no
+  group_by(trial_id) %>%
+  mutate(curve_id = paste(trial_id, curve_group, sep = "_")) %>%
+  ungroup() %>%
+  group_by(trial_id, curve_group) %>%
+  # assign fertilized curve id to controls
+  mutate(curve_id = if_else(n_rate == 0, first(curve_id[n_rate > 0]), curve_id)) %>%
+  ungroup() %>%
+  # group_by(curve_id) %>% 
+  # mutate(curve_no = cur_group_id()) %>% ungroup() %>% 
+  mutate(curve_no = dense_rank(curve_id)) %>%            # CURVE_NO 
+  # Final cleanup
+  group_by(curve_id) %>% 
+  mutate(rates_number = n_distinct(n_rate),
+         maxrate_curve = max(n_rate, na.rm = TRUE)) %>% ungroup() %>% 
+  # Filter per number of rates and minimum MAXRate
+  dplyr::filter(rates_number >=4 & maxrate_curve >=140) 
+
+
+  
+ # Make Previous Crop classes
+data_03 <- data_02 %>% 
+  # A. Previous Crop
+mutate(prevcrop = tolower(trimws(prevcrop))) %>%
+mutate(prevcrop_group = case_when(
+  is.na(prevcrop) | prevcrop == "" ~ NA_character_,
+  # Legumes
+  prevcrop %in% c("alfalfa", "corn-alfalfa", "soybean", "beans") ~ "legumes",
+  # Corn
+  prevcrop == "corn" ~ "corn",
+  # Small cereals
+  prevcrop %in% c("barley", "bromegrass", "cereals", "grass", "mixed grain",
+                  "oats", "potatoes", "shrubs", "small grain", "tobacco",
+                  "wheat", "wheat_rc") ~ "small_cereals"#,
+  # Other
+  #TRUE ~ "other"
+)) 
+
+```
+
+
+
+## 5. Models
+
+### a. Explore
+```{r fig.width=9, fig.height=5}
+
+# Define yield_colors
+yield_colors <- c("#4C72B0", "#55A868", "#C44E52")
+
+data_03 %>% 
+  ggplot(aes(x = n_rate * 0.89, y = yield_buac, color = yieldlevel)) +
+  
+  # Add points first 
+  geom_point(aes(group = curve_id),
+             size = 1,        
+             alpha = 0.8) +     
+  
+  geom_smooth(aes(group = curve_id),
+              formula = y ~ poly(x, 2), 
+              method = "lm",
+              se = FALSE,
+              linewidth = 0.15) +
+  
+  # Colors for 3 yield levels
+  scale_color_manual(name = "Yield level", 
+                     values = c("High" = yield_colors[1],      
+                               "Medium" = yield_colors[2],     
+                               "Low" = yield_colors[3]),      
+                     drop = TRUE) +  
+  
+  scale_y_continuous(breaks = seq(0, 350, by = 50)) +
+  facet_wrap(~prevcrop_group) +
+  theme_classic() +
+  labs(x = "N rate (lbs N/ac)", y = "Yield (bu/ac)") +
+  theme(axis.title = element_text(size = rel(1.5)),
+        axis.text = element_text(size = rel(1.15)))
+
+#data_03 %>% group_by(curve_id) %>% slice_head(n=1) %>% 
+#  ungroup() %>% group_by(prevcrop_group) %>% 
+#  tally()
+
+```
+
+
+### b. Prepare data for models
+```{r}
+
+# Prepare data for curve fitting
+
+# Create NAE data for further use 
+nae_curves <- data_03 %>%
+  mutate(yield_tha = yield/1000) %>% 
+  ungroup() %>% 
+  dplyr::select(curve_id,nae,soiltext) %>%
+  dplyr::filter(soiltext != "sandy_clay")
+  
+
+
+# Data for QP model
+data_curves <- data_03 %>% 
+  mutate(yield_tha = yield/1000) %>% 
+  ungroup() %>% 
+  # remove problematic curves
+  #dplyr::filter(curve_id %notin% problem_curves) %>% 
+  dplyr::select(trial_id, year, decade, curve_group, curve_id, 
+                ymin, ymax, yieldlevel, soiltext, UPPER_TIER_MUNICIPALITY,
+                n_rate, yield, prevcrop, prevcrop_group, maxrate_curve) %>%
+  dplyr::filter(soiltext != "sandy_clay")
+  
+
+#drop_na(prevcrop_group)
+
+```
+
+
+### C. Qp models
+```{r warning=FALSE, message=FALSE}
+
+# Fit a quadratic plateau model to each curve_id
+# Define a safe version of the quadratic_plateau function
+safe_quadratic_plateau <- possibly(
+  ~ quadratic_plateau(stv = .x$n_rate, ry = .x$yield),
+  # Fill NAs with zeroes for simpler filtering at later steps
+  otherwise = data.frame(intercept=0,slope=0,quadratic=0,plateau=0,CSTV=0), 
+  quiet = TRUE )
+
+#Nest data
+data_curves_nest <- data_curves %>%
+  group_by(curve_id) %>%
+  nest(data = c("n_rate", "yield"))
+
+# Split data by curve_id and fit models
+# Apply the safe function to each group
+qp_results_01 <- data_curves_nest %>%
+  # Run QP models
+  mutate(qpmodel = purrr::map(data, safe_quadratic_plateau)  ) 
+
+# Run quadratic
+qp_results_02 <-
+  qp_results_01 %>% 
+  mutate(quad_model = purrr::map(data,
+         purrr::possibly(~ lm(yield ~ n_rate + I(n_rate^2), data = .x),
+                         otherwise = NULL)),
+         quad_model_tidy = purrr::map(quad_model, ~ if (!is.null(.x)) broom::tidy(.x) else NULL)
+         # quad_model_gof = map(quad_model, ~ if (!is.null(.x)) broom::glance(.x) else NULL)
+         ) %>%
+  unnest(cols = c("qpmodel", "quad_model_tidy")) %>% ungroup() %>% 
+  dplyr::select(-'std.error', -'statistic', -'p.value') %>% 
+  pivot_wider(names_from = term, values_from = estimate) %>% 
+  # Coeff from quadratic (no-plateau) uppercase B
+  rename(B0 = `(Intercept)`, B1 = n_rate, B2 = `I(n_rate^2)`) %>% 
+  mutate(b0 = case_when(intercept == 0 ~ B0, TRUE ~ intercept),
+         b1 = case_when(slope == 0 ~ B1, TRUE ~ slope),
+         b2 = case_when(quadratic == 0 ~ B2, TRUE ~ quadratic),
+         aonr = case_when(CSTV == maxrate_curve ~ maxrate_curve,
+                          CSTV < 0 ~ 0,
+                          b1 < 0 ~ 0,
+                          TRUE ~ CSTV)
+         )
+```
+
+```{r}
+
+# Prepare nae data 
+nae_curves <- nae_curves %>%
+  select(-soiltext)
+
+# Group by curve_id and take the most common value
+curve_nae <- nae_curves %>%
+  group_by(curve_id) %>%
+  summarize(nae = names(sort(table(nae), decreasing = TRUE))[1], .groups = "drop")
+
+
+# Join with the qp_results_02 table 
+qp_results_02 <- qp_results_02 %>%
+  left_join(curve_nae, by = "curve_id")
+```
+
+
+### d. MERN
+```{r}
+# Define a robust function for MERN calculation
+calculate_new_mern <- function(price_ratio, b1, b2) {
+  if (is.na(b1) || is.na(b2) || b2 == 0) {
+    return(NA) # Handle missing or invalid data
+  }
+  ((price_ratio) - b1) / (2 * b2)
+}
+
+# Define a function for YMERN calculation
+calculate_ymern <- function(b0, b1, b2, mern) {
+  if (is.na(mern)) {
+    return(NA)
+  }
+  b0 + b1 * mern + b2 * (mern^2)
+}
+
+# Add MERN and YMERN columns to qp_results for all price ratios
+qp_mern <- qp_results_02 %>%
+  mutate(MERN_median = mapply(calculate_new_mern, price_ratio=6, b1, b2),
+         YMERN_median = mapply(calculate_ymern, b0, b1, b2, MERN_median)) %>% 
+  # Adjust MERN for special cases (e.g. flat curves, linear, negative response)
+  # Flat curves --> AORN = 0, Neg_slopes --> AONR = 0, linear --> AONR = maxrate
+  mutate(MERN_adj = case_when(b1 < 0 ~ 0,
+                              CSTV == maxrate_curve ~ maxrate_curve,
+                              MERN_median >= maxrate_curve ~ maxrate_curve,
+                              MERN_median < 0 ~ 0,
+                              TRUE ~ MERN_median)) %>% 
+  # Adjust YMERN
+  mutate(YMERN_adj = b0 + b1 * MERN_adj + b2 * (MERN_adj^2)) %>% 
+  # Delta yield
+  mutate(delta_yield = YMERN_adj - b0) %>% 
+  # Transform to bu/ac and lbs/ac
+  mutate(MERN_lbs = MERN_adj * 0.89,
+         YMERN_bu = YMERN_adj * 0.01593,
+         delta_bu = delta_yield * 0.01593)
+
+```
+
+
+## 6.Clean qp_mern dataset
+```{r}
+# Clean data and fit the no-intercept model manually
+qp_clean <- qp_mern %>%
+  filter(!is.na(YMERN_bu), !is.na(MERN_lbs))
+
+fit_no_intercept <- lm(MERN_lbs ~ 0 + YMERN_bu, data = qp_clean)
+```
+
+## 7.Extract qp_clean
+```{r}
+# Convert each column to string from list datatype for extracting 
+qp_clean_char <- qp_clean %>% mutate(across(where(is.list), ~ sapply(., toString)))
+write.csv(qp_clean_char, "qp_clean.csv", row.names = FALSE)
+
+```
