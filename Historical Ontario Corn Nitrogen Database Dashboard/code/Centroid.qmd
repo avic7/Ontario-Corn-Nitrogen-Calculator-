@@ -1,0 +1,208 @@
+---
+title: "NCorn Centrod Calculation"
+author: "Atharva"
+format: html
+editor: visual
+---
+
+## 1. Library
+
+```{r, include=FALSE}
+library(sf)
+library(ggplot2)
+library(readxl)
+library(leaflet)
+library(dplyr)
+```
+
+
+## 2. Reading the lower counties geojson files
+```{r}
+#Read the geojson
+lower_counties_path<- "C:/Users/avichare/Desktop/DATA_6700/NCorn analytics/Geojson/lower_tier.geojson"
+
+
+ontario_counties_lower <- st_read(lower_counties_path)
+```
+
+## 3.  Reading the noraml counties geojson files
+```{r}
+#Read the geojson
+ontario_counties_path<- "C:/Users/avichare/Desktop/DATA_6700/NCorn analytics/Geojson/ontario_counties_map.geojson"
+
+
+ontario_counties_map <- st_read(ontario_counties_path)
+```
+
+## 4. Reading the NCorn data 
+```{r}
+NCorn <- openxlsx::read.xlsx(xlsxFile="data/N_corn_06182025.xlsx",
+                      sheet = "rawdata", startRow = 2)
+head(NCorn)
+
+```
+
+```{r}
+NCorn_spatial <- st_as_sf(NCorn, 
+                          coords = c("lon", "lat"), 
+                          crs = 4326)  
+
+# Check the spatial data
+print(paste("Number of spatial points created:", nrow(NCorn_spatial)))
+```
+
+
+## 5. Fix incorrect geometries
+```{r}
+# Fix invalid geometries in the municipal boundaries
+ontario_counties_lower_clean <- st_make_valid(ontario_counties_lower) 
+```
+
+
+```{r}
+# Check if the cleaning worked
+st_is_valid(ontario_counties_lower_clean) %>% all()
+```
+
+
+## 6. Spatial join NCorn spatial and lower counties geojson 
+```{r}
+# Now try the spatial join with the cleaned geometries
+NCorn_with_municipality <- st_join(NCorn_spatial, ontario_counties_lower_clean) 
+head(NCorn_with_municipality)
+```
+
+
+## 7. Calculate centroids of counties
+### a. Get the centroids
+```{r}
+
+NCorn_with_municipality <- NCorn_with_municipality %>%
+  group_by(MUNICIPAL_NAME_SHORTFORM) %>%
+  mutate(
+    municipal_centroid_lon = mean(st_coordinates(geometry)[, 1], na.rm = TRUE),
+    municipal_centroid_lat = mean(st_coordinates(geometry)[, 2], na.rm = TRUE)
+  ) %>%
+  ungroup() 
+
+
+#NCorn_with_municipality <- NCorn_with_municipality %>%
+#  select( 
+#    trial_id, year, township, County, soilseries, soiltext,
+#    stv_0015, stv_0020, stv_0030, stv_1530, stv_3060,
+#    stv_method, stv_moment, tillage, plantdate, prevcrop,
+#    n_rate, curve_group, fall_rate, fall_source, fall_place,
+#    pre_rate, pre_source, pre_place, pre_date,
+#    sow_rate, sow_source, sow_place,
+#    inseason_rate, inseason_source, inseason_place, inseason_time,
+#    yield, rep_id, total_reps, old_trial_id,
+#    geometry, MUNICIPAL_NAME, MUNICIPAL_NAME_SHORTFORM,
+#    UPPER_TIER_MUNICIPALITY, municipal_centroid_lon, municipal_centroid_lat)
+
+```
+
+### b. Drop geometry column 
+```{r}
+NCorn_with_municipality <- NCorn_with_municipality %>%
+  st_drop_geometry()
+```
+
+### c. Add more jitter to make them more private
+```{r}
+NCorn_sample_df1 <- NCorn_with_municipality %>%
+  group_by(trial_id) %>%  
+  mutate(
+    sample_lat = municipal_centroid_lat + sample(size =1 ,c(-0.002, 0.002)),
+    sample_lon = municipal_centroid_lon + sample(size =1 ,c(-0.002, 0.002))
+  ) %>%
+  ungroup()
+```
+
+### d. Inspect the dataframe
+```{r}
+head(NCorn_sample_df1)
+```
+
+
+## 8. Check column names in new df 
+```{r}
+colnames(NCorn_sample_df1)
+```
+
+
+## 9. Only keep columns which are essential
+```{r}
+# Vector of columns to keep
+keep_cols <- c(
+  "doc_no", "doc_name", "doc_name_2", "minreqs", "note", "ginna.notes",
+  "class", "code_id", "code_id_2", "trial_id", "year", "site_(town)", 
+  "township", "County", "soilseries", "soiltext", "stv_0015", "stv_0020", 
+  "stv_0030", "stv_1530", "stv_3060", "stv_depth1", "stv_depth2", 
+  "stv_depth3", "stv_unit", "stv_method", "stv_moment", "curve_indicator", 
+  "tillage", "plantdate", "pop", "genotype", "genotype_name", "prevcrop", 
+  "n_rate", "curve_group", "fall_rate", "fall_source", "fall_place", 
+  "pre_rate", "pre_source", "pre_place", "pre_date", "sow_rate", 
+  "sow_source", "sow_place", "inseason_rate", "inseason_source", 
+  "inseason_place", "inseason_time", "other", "yield", "yield_unit", 
+  "moist_gkg", "design", "rep_id", "total_reps", "old_trial_id", 
+  "UPPER_TIER_MUNICIPALITY", "sample_lat", "sample_lon"
+)
+
+# Subset the dataframe
+NCorn_sample_df1 <- NCorn_sample_df1[, keep_cols]
+
+```
+
+## 10. Create sf of new NCorn
+```{r}
+NCorn_sf <- st_as_sf(NCorn_sample_df1,
+  coords = c("sample_lon", "sample_lat"),
+  crs = 4326
+)
+```
+
+
+## 11. Plot the map 
+```{r}
+# Create a label column for Leaflet
+NCorn_leaf_sf <- NCorn_sf %>%
+  group_by(trial_id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  mutate(popup_label = paste0(
+    "<b>Trial ID:</b> ", trial_id, "<br>",
+    "<b>County:</b> ", County, "<br>",
+    "<b>Municipality:</b> ", UPPER_TIER_MUNICIPALITY
+  )) 
+```
+
+```{r}
+leaflet(NCorn_leaf_sf) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  
+  addPolygons(data = ontario_counties_map,
+              color = "#444444",
+              weight = 1,
+              opacity = 0.5,
+              fillOpacity = 0.1,
+              label = ~County) %>%  # <- FIXED LINE
+  
+  addCircleMarkers(radius = 2,
+                   color = "blue",
+                   stroke = FALSE,
+                   fillOpacity = 0.8,
+                   label = lapply(NCorn_leaf_sf$popup_label, htmltools::HTML),
+                   labelOptions = labelOptions(
+                     direction = "auto",
+                     style = list("font-weight" = "bold",
+                                  "font-size" = "12px")
+                   ))
+
+```
+
+
+## 12. Export the new df 
+```{r}
+
+write.csv(NCorn_sample_df1, "N_corn_08042025.csv", row.names = FALSE)
+```
