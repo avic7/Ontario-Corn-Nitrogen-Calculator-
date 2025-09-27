@@ -78,6 +78,7 @@ This created uncertainty in fertilizer planning and limited the ability to tailo
 <img width="894" height="437" alt="image" src="https://github.com/user-attachments/assets/4c09206c-0b92-467b-bff6-a88b688a7b13" />
 
 
+The code repository for this dashboard is not yet public since its not yet published. It will be pulished soon . Thank you for your patience 😊
 
 
 ### Future Directions
